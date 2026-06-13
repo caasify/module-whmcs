@@ -1,0 +1,10 @@
+.DS_Store
+docs/
+AGENTS.md
+deploy.py
+build/
+frontend/dist/
+frontend/test-results/
+deploy.py
+__pycache__/
+*.pyc

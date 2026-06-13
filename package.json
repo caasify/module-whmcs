@@ -1,0 +1,13 @@
+{
+  "name": "caasify-whmcs-module",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "node scripts/package-whmcs.mjs stage",
+    "build:frontend": "node scripts/build-frontend.mjs",
+    "clean": "node scripts/package-whmcs.mjs clean",
+    "dev": "npm --prefix frontend run dev",
+    "lint": "npm --prefix frontend run lint",
+    "package": "npm run build && node scripts/package-whmcs.mjs zip"
+  }
+}
