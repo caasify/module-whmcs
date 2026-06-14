@@ -163,6 +163,7 @@ export const faMessages = {
   "serverDetail.powerStopping": "در حال خاموش شدن",
   "serverDetail.provisioningTitle": "مراحل آماده‌سازی سرور",
   "serverDetail.provisioningInProgress": "در حال انجام",
+  "serverDetail.installationProgress": "نصب {value}٪",
   "serverDetail.provisioningReadyLabel": "آماده",
   "serverDetail.provisioningOrderCopy": "سفارش ثبت شده و سرور وارد صف آماده‌سازی شده است.",
   "serverDetail.provisioningSetupCopy": "سرور در حال آماده‌سازی است و سیستم‌عامل روی آن نصب می‌شود.",

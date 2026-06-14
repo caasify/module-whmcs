@@ -170,6 +170,7 @@ export const enMessages = {
   "serverDetail.powerStopping": "Powering off...",
   "serverDetail.provisioningTitle": "Provisioning Progress",
   "serverDetail.provisioningInProgress": "In Progress",
+  "serverDetail.installationProgress": "Installation {value}%",
   "serverDetail.provisioningReadyLabel": "Ready",
   "serverDetail.provisioningOrderCopy": "Your order has been received and the VPS is entering the setup queue.",
   "serverDetail.provisioningSetupCopy": "The VPS is being prepared and the operating system is being installed.",

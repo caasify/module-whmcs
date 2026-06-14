@@ -35,6 +35,8 @@ import { getServerProvisioningStatus } from '../lib/services/server'
 import { cn } from '../lib/cn'
 import { formatRelativeTime } from '../lib/formatters'
 
+const ORDER_DETAIL_REFRESH_INTERVAL_MS = 30000
+
 function getServerFlag(locationCode) {
   if (locationCode === 'TR') {
     return '🇹🇷'
@@ -305,34 +307,39 @@ export function ServerDetailPage() {
   })
 
   useEffect(() => {
-    if (!serverId) {
-      setDetailStatus('idle')
-      return
-    }
+    const timeoutId = window.setTimeout(() => {
+      if (!serverId) {
+        setDetailStatus('idle')
+        return
+      }
 
-    setDetailStatus('loading')
-    void handleLoadServerDetail(serverId)
+      setDetailStatus('loading')
+      void handleLoadServerDetail(serverId)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
   }, [serverId])
 
   const poweredOn = Boolean(server?.powerState)
   const pendingPowerAction = serverId ? serverActionStates[serverId]?.powerAction ?? null : null
   const effectivePoweredOn = pendingPowerAction ? pendingPowerAction === 'start' : poweredOn
   const provisioningStatus = getServerProvisioningStatus(server)
-  const shouldMonitorServer = provisioningStatus.isProvisioning || Boolean(pendingPowerAction)
 
   useEffect(() => {
-    if (!serverId || !shouldMonitorServer) {
+    if (!serverId) {
       return
     }
 
     const intervalId = window.setInterval(() => {
       handleMonitorServer(serverId)
-    }, 5000)
+    }, ORDER_DETAIL_REFRESH_INTERVAL_MS)
 
     return () => {
       window.clearInterval(intervalId)
     }
-  }, [serverId, shouldMonitorServer])
+  }, [serverId])
 
   if (detailStatus === 'loading' || (serverId && !server && detailStatus === 'idle')) {
     return (
@@ -574,7 +581,11 @@ export function ServerDetailPage() {
               </p>
             </div>
             <span className="type-badge inline-flex items-center rounded-full bg-[var(--color-info-soft)] px-4 py-2 text-[var(--color-primary)]">
-              {t('serverDetail.provisioningInProgress')}
+              {Number.isFinite(provisioningStatus.installationProgress)
+                ? t('serverDetail.installationProgress', {
+                    value: formatNumber(provisioningStatus.installationProgress),
+                  })
+                : t('serverDetail.provisioningInProgress')}
             </span>
           </div>
 

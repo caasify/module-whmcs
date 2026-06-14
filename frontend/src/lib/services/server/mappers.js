@@ -54,6 +54,20 @@ function toRoundedNumber(value, digits = 2) {
   return Number(toNumber(value).toFixed(digits))
 }
 
+function toPercent(value) {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const parsed = Number(String(value).replace('%', '').trim())
+
+  if (!Number.isFinite(parsed)) {
+    return null
+  }
+
+  return Math.min(100, Math.max(0, Math.round(parsed)))
+}
+
 function countryCodeFromName(countryName) {
   const normalized = String(countryName ?? '').trim().toLowerCase()
   const knownCodes = {
@@ -402,6 +416,7 @@ function buildServerSummary(order, views = [], actions = [], pricingContext = nu
   const diskSize = toNumber(detail?.disk_size, Number.NaN)
   const ipAddress = addresses.ipAddress === 'n/a' && !allowStaticFallbacks ? '' : addresses.ipAddress
   const ipv6Address = addresses.ipv6Address === 'n/a' && !allowStaticFallbacks ? '' : addresses.ipv6Address
+  const installationProgress = toPercent(order?.installed)
 
   return {
     id: `srv-${order.id}`,
@@ -441,6 +456,7 @@ function buildServerSummary(order, views = [], actions = [], pricingContext = nu
     storage: Number.isFinite(diskSize) ? `${diskSize} GB ${detail?.disk_type ?? 'SSD'}` : '',
     network: trafficLimit > 0 ? `${trafficLimit} GB` : (allowStaticFallbacks ? 'n/a' : ''),
     inboundUsed: allowStaticFallbacks ? 0 : null,
+    installationProgress,
     outboundUsed: allowStaticFallbacks ? 0 : null,
     outboundLimit: trafficLimit,
     powerState: status.powerState,
@@ -548,7 +564,12 @@ export function getServerProvisioningStatus(server) {
 
   const rawOrder = server.rawOrder ?? null
   const normalizedOrderStatus = String(rawOrder?.status ?? server.statusCode ?? '').trim().toLowerCase()
-  const setupDelivered = String(rawOrder?.setup?.status ?? '').trim().toLowerCase() === 'delivered'
+  const installationProgress = toPercent(rawOrder?.installed ?? server.installationProgress)
+  const hasInstallationProgress = installationProgress !== null
+  const installationComplete = hasInstallationProgress && installationProgress >= 100
+  const setupDelivered =
+    installationComplete
+    || String(rawOrder?.setup?.status ?? '').trim().toLowerCase() === 'delivered'
   const networkReady =
     hasCompletedView(rawOrder, rawOrder?.views ?? [])
     || (server.ipAddress && server.ipAddress !== 'n/a')
@@ -580,6 +601,7 @@ export function getServerProvisioningStatus(server) {
 
   return {
     currentStep: isReady ? steps.length + 1 : nextStepIndex + 1,
+    installationProgress,
     isReady,
     isProvisioning: !isReady,
     steps,
