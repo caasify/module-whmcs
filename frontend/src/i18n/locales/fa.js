@@ -71,6 +71,7 @@ export const faMessages = {
   "common.actions.backToBilling": "بازگشت به صورتحساب",
   "common.status.active": "فعال",
   "common.status.online": "آنلاین",
+  "common.status.pending": "در انتظار",
   "common.status.open": "باز",
   "common.status.closed": "بسته",
   "common.status.awaitingReply": "در انتظار پاسخ",

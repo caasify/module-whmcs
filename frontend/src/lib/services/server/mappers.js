@@ -567,15 +567,12 @@ export function getServerProvisioningStatus(server) {
   const installationProgress = toPercent(rawOrder?.installed ?? server.installationProgress)
   const hasInstallationProgress = installationProgress !== null
   const installationComplete = hasInstallationProgress && installationProgress >= 100
-  const setupDelivered =
-    installationComplete
-    || String(rawOrder?.setup?.status ?? '').trim().toLowerCase() === 'delivered'
   const networkReady =
     hasCompletedView(rawOrder, rawOrder?.views ?? [])
     || (server.ipAddress && server.ipAddress !== 'n/a')
     || (server.ipv6Address && server.ipv6Address !== 'n/a')
   const readyForUse =
-    setupDelivered
+    installationComplete
     && networkReady
     && (normalizedOrderStatus === 'active' || normalizedOrderStatus === 'online')
   const steps = [
@@ -585,7 +582,9 @@ export function getServerProvisioningStatus(server) {
     },
     {
       key: 'setup',
-      complete: setupDelivered,
+      complete: hasInstallationProgress
+        ? installationComplete
+        : String(rawOrder?.setup?.status ?? '').trim().toLowerCase() === 'delivered',
     },
     {
       key: 'network',

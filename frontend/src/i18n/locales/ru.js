@@ -28,6 +28,7 @@ export const ruMessages = {
   'common.actions.delete': 'Удалить',
   'common.status.active': 'Активно',
   'common.status.online': 'Онлайн',
+  'common.status.pending': 'В ожидании',
   'common.status.open': 'Открыт',
   'common.status.closed': 'Закрыт',
   'common.status.awaitingReply': 'Ожидает ответа',

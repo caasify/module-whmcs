@@ -28,6 +28,7 @@ export const esMessages = {
   'common.actions.delete': 'Eliminar',
   'common.status.active': 'Activo',
   'common.status.online': 'En línea',
+  'common.status.pending': 'Pendiente',
   'common.status.open': 'Abierto',
   'common.status.closed': 'Cerrado',
   'common.status.awaitingReply': 'Esperando respuesta',

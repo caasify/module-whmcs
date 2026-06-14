@@ -71,6 +71,7 @@ export const enMessages = {
   "common.actions.backToBilling": "Back to Billing",
   "common.status.active": "Active",
   "common.status.online": "Online",
+  "common.status.pending": "Pending",
   "common.status.open": "Open",
   "common.status.closed": "Closed",
   "common.status.awaitingReply": "Awaiting Reply",

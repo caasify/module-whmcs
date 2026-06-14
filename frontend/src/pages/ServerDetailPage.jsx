@@ -259,7 +259,7 @@ function ActivityTimelineCard({ items, locale, subtitle, t, className }) {
                         : 'bg-[var(--color-success-soft)] text-[var(--color-success)]',
                     )}
                   >
-                    {t('common.status.delivered')}
+                    {t(`common.status.${item.statusCode}`, undefined, item.status)}
                   </span>
                 </div>
               </div>
@@ -588,6 +588,17 @@ export function ServerDetailPage() {
                 : t('serverDetail.provisioningInProgress')}
             </span>
           </div>
+
+          {Number.isFinite(provisioningStatus.installationProgress) ? (
+            <div className="mt-6">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--color-border)]">
+                <div
+                  className="h-full rounded-full bg-[var(--color-primary)] transition-all duration-500"
+                  style={{ width: `${Math.min(100, Math.max(0, provisioningStatus.installationProgress))}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-8">
             <StepProgress currentStep={provisioningStatus.currentStep} steps={provisioningSteps} />

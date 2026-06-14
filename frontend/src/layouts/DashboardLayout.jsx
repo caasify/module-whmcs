@@ -1,9 +1,12 @@
 import { AlertTriangle, CheckCircle2, X } from '@/components/icons'
+import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from '../components/layout/Sidebar'
 import { TopHeader } from '../components/layout/TopHeader'
 import { useDashboardApp } from '../context/useDashboardApp'
 import { cn } from '../lib/cn'
+
+const NOTICE_DISMISS_DELAY_MS = 4_000
 
 export function DashboardLayout() {
   const {
@@ -20,6 +23,20 @@ export function DashboardLayout() {
     t,
     themeMode,
   } = useDashboardApp()
+
+  useEffect(() => {
+    if (!ui.notice) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      actions.dismissNotice()
+    }, NOTICE_DISMISS_DELAY_MS)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [ui.notice, actions.dismissNotice])
   const scaledViewportHeight = { height: 'calc(100vh / var(--app-scale))' }
   const shellStyle = {
     ...scaledViewportHeight,
