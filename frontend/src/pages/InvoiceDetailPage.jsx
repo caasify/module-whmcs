@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Download, Printer } from '@/components/icons'
+import { ArrowLeft, ArrowRight, Printer } from '@/components/icons'
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
@@ -15,31 +15,6 @@ function statusStyles(status, amountDue) {
   return 'border-[var(--color-danger-border)] bg-[var(--color-danger-soft)] text-[var(--color-danger)]'
 }
 
-function AddressPanel({ address, email, name, emailTone = 'primary' }) {
-  return (
-    <div>
-      <div className="rounded-[22px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-7 shadow-[var(--shadow-panel)]">
-        <h3 className="type-section-title text-[var(--color-ink)]">
-          {name}
-        </h3>
-        <div className="type-page-subtitle mt-5 space-y-1.5 text-[var(--color-copy)]">
-          {address.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
-        </div>
-        <p
-          className={cn(
-            'type-body mt-7',
-            emailTone === 'primary' ? 'type-body-strong text-[var(--color-primary)]' : 'text-[var(--color-copy)]',
-          )}
-        >
-          {email}
-        </p>
-      </div>
-    </div>
-  )
-}
-
 function DetailField({ children, label }) {
   return (
     <div>
@@ -51,22 +26,61 @@ function DetailField({ children, label }) {
   )
 }
 
-function getInvoiceLineItemTitle(lineItem, invoice, t) {
-  const customTitle = typeof lineItem?.type === 'string' ? lineItem.type.trim() : ''
+function getInvoiceLineItemTitle(lineItem, t) {
+  const description = String(lineItem?.description ?? '').trim()
 
-  if (customTitle) {
-    return customTitle
+  if (description.toLowerCase().includes('caasify_add_funds')) {
+    return t('invoice.lineItemAddFunds')
   }
 
-  if (typeof lineItem?.typeCode === 'string' && lineItem.typeCode.trim()) {
-    return t(
-      `billing.invoiceType.${lineItem.typeCode}`,
-      undefined,
-      invoice.type || t('invoice.lineItemFallback'),
-    )
+  return ''
+}
+
+function getInvoiceLineItemDescription(lineItem, t) {
+  const description = String(lineItem?.description ?? '').trim()
+
+  if (description.toLowerCase().includes('caasify_add_funds')) {
+    return t('invoice.lineItemAddFunds')
   }
 
-  return invoice.type || t('invoice.lineItemFallback')
+  return description || ''
+}
+
+function humanizeGatewayName(value) {
+  const normalized = String(value ?? '').trim()
+
+  if (!normalized) {
+    return ''
+  }
+
+  return normalized
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase())
+    .replace(/\bPpcpv\b/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function resolvePaymentMethodLabel(paymentMethods, invoice) {
+  const code = String(invoice?.paymentMethodCode ?? invoice?.paymentMethod ?? '').trim().toLowerCase()
+
+  if (!code) {
+    return '--'
+  }
+
+  const matchedGateway = Array.isArray(paymentMethods)
+    ? paymentMethods.find((method) => String(method?.module ?? method?.id ?? '').trim().toLowerCase() === code)
+    : null
+
+  const resolvedLabel =
+    String(matchedGateway?.displayName ?? matchedGateway?.module ?? '').trim() ||
+    String(invoice?.paymentMethodLabel ?? invoice?.paymentMethod ?? '').trim()
+
+  if (resolvedLabel) {
+    return resolvedLabel
+  }
+
+  return humanizeGatewayName(code)
 }
 
 export function InvoiceDetailPage() {
@@ -77,8 +91,7 @@ export function InvoiceDetailPage() {
     invoiceReadState,
     loading,
     nativeRoutes,
-    companyProfile,
-    user,
+    paymentMethods,
     whmcsAccess,
     actions,
     formatWhmcsCurrency,
@@ -94,19 +107,13 @@ export function InvoiceDetailPage() {
     null
   const invoiceRequiresNativeFallback = Boolean(invoiceId) && Boolean(invoiceReadState.detailNativeFallback[invoiceId])
   const isLoading = Boolean(invoiceId) && Boolean(loading.invoiceDetails[invoiceId])
-  const invoicedTo = invoice?.invoicedTo ?? {
-    name: user.fullName,
-    address: [t('invoice.addressUnavailable')],
-    email: user.email,
-  }
-  const payTo = invoice?.payTo ?? {
-    name: companyProfile.name,
-    address: companyProfile.address,
-    email: companyProfile.email,
-  }
   const subtotal = invoice?.subtotal ?? invoice?.total ?? 0
-  const paymentMethodLabel = invoice?.paymentMethod || invoice?.paymentMethodCode || '--'
+  const paymentMethodLabel = resolvePaymentMethodLabel(paymentMethods, invoice)
   const fallbackInvoiceUrl = buildWhmcsClientAreaUrl('viewinvoice.php', { id: invoiceId })
+  const nativeInvoiceUrl = new URL(nativeRoutes.invoiceDetailUrl, window.location.href)
+
+  nativeInvoiceUrl.searchParams.set('id', invoiceId)
+
   const invoicePortalUrl = invoice?.portalUrl || fallbackInvoiceUrl
 
   useEffect(() => {
@@ -114,11 +121,8 @@ export function InvoiceDetailPage() {
       return
     }
 
-    void loadInvoiceDetail(invoiceId, {
-      companyProfile,
-      currentClient: user,
-    })
-  }, [companyProfile, invoiceId, loadInvoiceDetail, user])
+    void loadInvoiceDetail(invoiceId)
+  }, [invoiceId, loadInvoiceDetail])
 
   useEffect(() => {
     if (whmcsAccess.canUseCustomTicketsAndInvoices && !invoiceRequiresNativeFallback) {
@@ -134,7 +138,11 @@ export function InvoiceDetailPage() {
   ])
 
   function formatInvoiceAmount(value, displayText = '') {
-    return displayText ? localizeDigits(displayText) : formatWhmcsCurrency(value)
+    if (Number.isFinite(Number(value))) {
+      return formatWhmcsCurrency(value)
+    }
+
+    return displayText ? localizeDigits(displayText) : formatWhmcsCurrency(0)
   }
 
   function formatInvoiceDate(value) {
@@ -230,23 +238,15 @@ export function InvoiceDetailPage() {
               <Button
                 variant="secondary"
                 className="type-button h-[54px] min-w-[154px] rounded-[18px] px-6"
-                onClick={() => redirectToWhmcsUrl(invoicePortalUrl, nativeRoutes.invoiceListUrl)}
+                onClick={() => redirectToWhmcsUrl(nativeInvoiceUrl.toString(), invoicePortalUrl || nativeRoutes.invoiceListUrl)}
               >
                 <ArrowRight className="rtl-flip h-4 w-4" strokeWidth={2.1} />
                 {t('common.actions.openInWhmcs', undefined, 'Open in WHMCS')}
               </Button>
-              <Button
-                className="type-button h-[54px] min-w-[164px] rounded-[18px] px-8"
-                disabled
-                variant="secondary"
-              >
-                <Download className="h-4 w-4" strokeWidth={2.1} />
-                {t('common.actions.download')}
-              </Button>
               {invoice.amountDue > 0 ? (
                 <Button
                   className="type-button h-[54px] min-w-[164px] rounded-[18px] px-8"
-                  onClick={() => redirectToWhmcsUrl(invoicePortalUrl, nativeRoutes.invoiceListUrl)}
+                  onClick={() => redirectToWhmcsUrl(nativeInvoiceUrl.toString(), invoicePortalUrl || nativeRoutes.invoiceListUrl)}
                 >
                   {t('common.actions.payNow')}
                   <ArrowRight className="rtl-flip h-4 w-4" strokeWidth={2.1} />
@@ -257,27 +257,6 @@ export function InvoiceDetailPage() {
 
           <div className="mt-10 border-t border-[var(--color-border)] pt-10">
             <div className="grid gap-8 lg:grid-cols-2">
-              <div>
-                <p className="type-label mb-4 text-[var(--color-muted)]">{t('invoice.invoicedTo')}</p>
-                <AddressPanel
-                  address={invoicedTo.address.map((line) => localizeDigits(line))}
-                  email={invoicedTo.email}
-                  name={invoicedTo.name}
-                />
-              </div>
-
-              <div>
-                <p className="type-label mb-4 text-[var(--color-muted)]">{t('invoice.payTo')}</p>
-                <AddressPanel
-                  address={payTo.address.map((line) => localizeDigits(line))}
-                  email={payTo.email}
-                  emailTone="copy"
-                  name={payTo.name}
-                />
-              </div>
-            </div>
-
-            <div className="mt-8 grid gap-8 lg:grid-cols-2">
               <DetailField label={t('invoice.invoiceDate')}>
                 <p className="type-detail-value text-[var(--color-ink)]">
                   {formatInvoiceDate(invoice.issuedDate)}
@@ -298,8 +277,6 @@ export function InvoiceDetailPage() {
             {(invoice.lineItems?.length ? invoice.lineItems : [
               {
                 id: `${invoice.id}-fallback-line`,
-                type: invoice.type,
-                typeCode: invoice.typeCode,
                 description: invoice.notes || t('invoice.lineItemFallback'),
                 amount: subtotal,
                 amountDisplay: invoice.subtotalDisplay || invoice.totalDisplay || '',
@@ -307,11 +284,8 @@ export function InvoiceDetailPage() {
             ]).map((lineItem) => (
               <div key={lineItem.id} className="grid grid-cols-[1fr_auto] gap-6 border-b border-[var(--color-border)] px-8 py-7 last:border-b-0">
                 <div>
-                  <p className="type-detail-value text-[var(--color-ink)]">
-                    {getInvoiceLineItemTitle(lineItem, invoice, t)}
-                  </p>
                   <p className="type-page-subtitle mt-2 text-[var(--color-copy)]">
-                    {localizeDigits(lineItem.description || t('invoice.lineItemFallback'))}
+                    {localizeDigits(getInvoiceLineItemTitle(lineItem, t) || getInvoiceLineItemDescription(lineItem, t))}
                   </p>
                 </div>
                 <p className="type-detail-value text-end text-[var(--color-ink)]">
@@ -321,8 +295,8 @@ export function InvoiceDetailPage() {
             ))}
           </div>
 
-          <div className="mt-12 flex justify-end">
-            <div className="w-full max-w-[390px] rounded-[26px] border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-7 shadow-[var(--shadow-surface)]">
+          <div className="mt-12">
+            <div className="w-full rounded-[26px] border border-[var(--color-border)] bg-[var(--color-surface)] px-8 py-7 shadow-[var(--shadow-surface)]">
               <div className="space-y-5">
                 <div className="type-body flex items-center justify-between">
                   <span className="text-[var(--color-copy)]">{t('invoice.subtotal')}</span>
@@ -342,10 +316,7 @@ export function InvoiceDetailPage() {
                     {t('invoice.total')}
                   </span>
                   <span className="type-price-lg text-[var(--color-primary)]">
-                    {formatInvoiceAmount(
-                      invoice.amountDue > 0 ? invoice.amountDue : invoice.total,
-                      invoice.amountDue > 0 ? invoice.amountDueDisplay : invoice.totalDisplay,
-                    )}
+                    {formatInvoiceAmount(invoice.amountDue > 0 ? invoice.amountDue : invoice.total)}
                   </span>
                 </div>
               </div>

@@ -362,7 +362,7 @@ export function DashboardPage() {
               <a
                 key={ticket.id}
                 className="block rounded-[18px] border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-5 transition hover:border-[var(--color-primary)]"
-                href={resolveTicketPortalUrl(ticket.id, ticket.portalUrl)}
+                href={resolveTicketPortalUrl(ticket.id, ticket.portalUrl, nativeRoutes.ticketDetailUrl)}
               >
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <p className="type-list-title line-clamp-2 text-[var(--color-ink)]">

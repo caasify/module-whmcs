@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { dashboardWhmcsApi } from '../../lib/dashboardWhmcsApi'
-import { hasDirectAuthToken, persistDirectAuthToken } from '../../lib/services/server'
+import { loadDirectAuthTokenOnce } from '../../lib/services/server'
 
 export function useDashboardDirectAuth({
   isAuthenticatedClient,
@@ -10,7 +10,6 @@ export function useDashboardDirectAuth({
   const needsDirectAuthBootstrap =
     !isPublicPricingView
     && isAuthenticatedClient
-    && !hasDirectAuthToken()
   const [loading, setLoading] = useState(
     () => needsDirectAuthBootstrap,
   )
@@ -25,14 +24,9 @@ export function useDashboardDirectAuth({
 
     let cancelled = false
 
-    void dashboardWhmcsApi.getDirectAuthToken()
-      .then((response) => {
-        if (cancelled) {
-          return
-        }
-
-        persistDirectAuthToken(response?.directAuthToken ?? '')
-      })
+    void loadDirectAuthTokenOnce(() => dashboardWhmcsApi.getDirectAuthToken(), {
+      forceRefresh: true,
+    })
       .catch(() => {
         if (cancelled) {
           return

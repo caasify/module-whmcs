@@ -326,6 +326,7 @@ export const faMessages = {
   "invoice.descriptionLabel": "شرح",
   "invoice.amountLabel": "مبلغ",
   "invoice.lineItemFallback": "آیتم فاکتور",
+  "invoice.lineItemAddFunds": "افزودن وجه",
   "invoice.subtotal": "جمع جزء",
   "invoice.creditApplied": "اعتبار اعمال‌شده",
   "invoice.total": "جمع کل",

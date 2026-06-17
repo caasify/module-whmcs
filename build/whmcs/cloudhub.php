@@ -155,6 +155,21 @@ if ($action !== '') {
                 (new \Caasify\Controllers\Billing\BillingGatewayController())->handle();
                 break;
 
+            case 'billing.invoices.list':
+                caasify_require_request_method('GET', $requestMethod);
+                (new \Caasify\Controllers\Billing\InvoicesController())->handle($clientId);
+                break;
+
+            case 'billing.invoices.detail':
+                caasify_require_request_method('GET', $requestMethod);
+                (new \Caasify\Controllers\Billing\InvoiceController())->handle($clientId, $input);
+                break;
+
+            case 'tickets.list':
+                caasify_require_request_method('GET', $requestMethod);
+                (new \Caasify\Controllers\Tickets\TicketsController())->handle($clientId);
+                break;
+
             case 'billing.add-funds.create':
                 caasify_require_request_method('POST', $requestMethod);
                 (new \Caasify\Controllers\Billing\AddFundsController())->handle($clientId, $input);

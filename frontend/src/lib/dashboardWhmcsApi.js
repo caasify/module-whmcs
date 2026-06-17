@@ -100,6 +100,19 @@ export const dashboardWhmcsApi = {
   getPaymentMethods() {
     return request('billing.gateways.list')
   },
+  getInvoices() {
+    return request('billing.invoices.list')
+  },
+  getInvoice(invoiceId) {
+    return request('billing.invoices.detail', {
+      query: {
+        invoiceId,
+      },
+    })
+  },
+  getTickets() {
+    return request('tickets.list')
+  },
   createAddFundsInvoice(amount, paymentMethodCode) {
     return request('billing.add-funds.create', {
       json: {

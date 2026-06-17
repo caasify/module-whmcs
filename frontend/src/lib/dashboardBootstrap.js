@@ -8,6 +8,23 @@ const DASHBOARD_LANGUAGE_COOKIE_NAME = 'caasify_dashboard_language'
 const DASHBOARD_LANGUAGE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 const DEFAULT_LOGIN_URL = '/index.php?rp=/login'
 
+function getFirstGrapheme(value) {
+  const text = String(value ?? '').trim()
+
+  if (!text) {
+    return ''
+  }
+
+  if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+    const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+    const segment = segmenter.segment(text).containing(0)
+
+    return segment?.segment ?? text.slice(0, 1)
+  }
+
+  return text.slice(0, 1)
+}
+
 function readDashboardLanguageCookie() {
   if (typeof document === 'undefined' || !document.cookie) {
     return null
@@ -86,7 +103,7 @@ function normalizeCurrentClient(currentClient) {
     initials:
       typeof currentClient.initials === 'string' && currentClient.initials.trim()
         ? currentClient.initials.trim()
-        : parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('') || 'CL',
+        : parts.slice(0, 2).map((part) => getFirstGrapheme(part)).join('') || 'CL',
     address: Array.isArray(currentClient.address)
       ? currentClient.address.filter((line) => typeof line === 'string' && line.trim())
       : [],
@@ -127,6 +144,8 @@ function normalizeNativeRoutes(nativeRoutes) {
     return {
       clientAreaUrl: 'clientarea.php',
       addFundsUrl: 'clientarea.php?action=addfunds',
+      ticketDetailUrl: 'supporttickets.php?action=view',
+      invoiceDetailUrl: 'viewinvoice.php',
       invoiceListUrl: 'clientarea.php?action=invoices',
       ticketCreateUrl: 'submitticket.php',
       ticketListUrl: 'supporttickets.php',
@@ -146,10 +165,18 @@ function normalizeNativeRoutes(nativeRoutes) {
       typeof nativeRoutes.ticketListUrl === 'string' && nativeRoutes.ticketListUrl.trim()
         ? nativeRoutes.ticketListUrl.trim()
         : 'supporttickets.php',
+    ticketDetailUrl:
+      typeof nativeRoutes.ticketDetailUrl === 'string' && nativeRoutes.ticketDetailUrl.trim()
+        ? nativeRoutes.ticketDetailUrl.trim()
+        : 'supporttickets.php?action=view',
     invoiceListUrl:
       typeof nativeRoutes.invoiceListUrl === 'string' && nativeRoutes.invoiceListUrl.trim()
         ? nativeRoutes.invoiceListUrl.trim()
         : 'clientarea.php?action=invoices',
+    invoiceDetailUrl:
+      typeof nativeRoutes.invoiceDetailUrl === 'string' && nativeRoutes.invoiceDetailUrl.trim()
+        ? nativeRoutes.invoiceDetailUrl.trim()
+        : 'viewinvoice.php',
     addFundsUrl:
       typeof nativeRoutes.addFundsUrl === 'string' && nativeRoutes.addFundsUrl.trim()
         ? nativeRoutes.addFundsUrl.trim()

@@ -114,7 +114,7 @@ export function TicketListPage() {
       render: (ticket) => (
         <a
           className="theme-button-secondary type-label inline-flex items-center gap-2 rounded-2xl border px-4 py-3 transition"
-          href={resolveTicketPortalUrl(ticket.id, ticket.portalUrl)}
+          href={resolveTicketPortalUrl(ticket.id, ticket.portalUrl, nativeRoutes.ticketDetailUrl)}
         >
           <ArrowUpRight className="h-4 w-4" strokeWidth={2.2} />
           {t('common.actions.view')}

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchTicketList, isWhmcsHandoffError } from '../../lib/services/whmcs'
+import { dashboardWhmcsApi } from '../../lib/dashboardWhmcsApi'
 
 export function useDashboardTickets({
-  nativeRoutes,
   showErrorNotice,
   whmcsAccess,
 }) {
@@ -34,20 +33,12 @@ export function useDashboardTickets({
     setLoadingFlag('tickets', true)
 
     try {
-      const nextTickets = await fetchTicketList(nativeRoutes.ticketListUrl)
-      setTickets(Array.isArray(nextTickets) ? nextTickets : [])
+      const payload = await dashboardWhmcsApi.getTickets()
+      setTickets(Array.isArray(payload?.tickets) ? payload.tickets : [])
       setReadState({
         nativeFallbackRequired: false,
       })
     } catch (error) {
-      if (isWhmcsHandoffError(error)) {
-        setTickets([])
-        setReadState({
-          nativeFallbackRequired: true,
-        })
-        return
-      }
-
       setTickets([])
       setReadState({
         nativeFallbackRequired: false,
@@ -56,7 +47,7 @@ export function useDashboardTickets({
     } finally {
       setLoadingFlag('tickets', false)
     }
-  }, [nativeRoutes.ticketListUrl, setLoadingFlag, showErrorNotice, whmcsAccess.canUseCustomTicketsAndInvoices])
+  }, [setLoadingFlag, showErrorNotice, whmcsAccess.canUseCustomTicketsAndInvoices])
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {

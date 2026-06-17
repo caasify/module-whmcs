@@ -610,7 +610,22 @@ export function getServerProvisioningStatus(server) {
 export function mapProfileToUser(profile, fallbackUser) {
   const fullName = profile?.name ? String(profile.name).trim() : fallbackUser.fullName
   const parts = fullName.split(/\s+/).filter(Boolean)
-  const initials = parts.slice(0, 2).map((part) => part.slice(0, 1).toUpperCase()).join('') || fallbackUser.initials
+  const initials = parts.slice(0, 2).map((part) => {
+    const text = String(part ?? '').trim()
+
+    if (!text) {
+      return ''
+    }
+
+    if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+      const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+      const segment = segmenter.segment(text).containing(0)
+
+      return segment?.segment ?? text.slice(0, 1)
+    }
+
+    return text.slice(0, 1)
+  }).join('') || fallbackUser.initials
 
   return {
     ...fallbackUser,

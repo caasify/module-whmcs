@@ -235,7 +235,6 @@ export function useDashboardServers({
       setLoading({
         overview: false,
       })
-      showErrorNotice('Unable to load the usage overview right now.')
     }
   }, [clearDirectServerState, directAuthReady, pricingContext, showErrorNotice])
 

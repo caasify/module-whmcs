@@ -40,6 +40,13 @@ final class WhmcsClientAreaUrl
         ]);
     }
 
+    public static function getTicketDetailBaseUrl(): string
+    {
+        return self::getClientAreaUrl('supporttickets.php', [
+            'action' => 'view',
+        ]);
+    }
+
     public static function getInvoiceListUrl(): string
     {
         return self::getClientAreaUrl('clientarea.php', [
@@ -59,6 +66,11 @@ final class WhmcsClientAreaUrl
         ]);
     }
 
+    public static function getInvoiceDetailBaseUrl(): string
+    {
+        return self::getClientAreaUrl('viewinvoice.php');
+    }
+
     public static function getAddFundsUrl(): string
     {
         return self::getClientAreaUrl('clientarea.php', [
@@ -72,7 +84,9 @@ final class WhmcsClientAreaUrl
             'clientAreaUrl' => self::getClientHomeUrl(),
             'ticketCreateUrl' => self::getTicketCreateUrl(),
             'ticketListUrl' => self::getTicketListUrl(),
+            'ticketDetailUrl' => self::getTicketDetailBaseUrl(),
             'invoiceListUrl' => self::getInvoiceListUrl(),
+            'invoiceDetailUrl' => self::getInvoiceDetailBaseUrl(),
             'addFundsUrl' => self::getAddFundsUrl(),
         ];
     }

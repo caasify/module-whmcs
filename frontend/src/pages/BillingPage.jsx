@@ -69,9 +69,6 @@ function InvoiceView({
       render: (invoice) => (
         <div>
           <p className="type-list-title text-[var(--color-ink)]">#{localizeDigits(invoice.id)}</p>
-          <p className="type-list-meta mt-1 text-[var(--color-copy)]">
-            {t(`billing.invoiceType.${invoice.typeCode}`, undefined, invoice.type)}
-          </p>
         </div>
       ),
     },

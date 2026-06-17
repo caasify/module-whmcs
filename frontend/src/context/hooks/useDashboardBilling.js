@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { dashboardWhmcsApi } from '../../lib/dashboardWhmcsApi'
 import { convertHubAmount, isMoneyActionsBlocked } from '../../lib/pricing'
-import { fetchInvoiceDetail, fetchInvoiceList, isWhmcsHandoffError } from '../../lib/services/whmcs'
 import { caasifyServerApi, isSilentDirectApiFailure } from '../../lib/services/server'
-import { buildWhmcsClientAreaUrl } from '../../lib/whmcsClientArea'
-import { mergeItemById } from '../dashboardCollections'
 
 function toNumber(value, fallback = 0) {
   return Number.isFinite(Number(value)) ? Number(value) : fallback
@@ -66,6 +63,20 @@ function humanizeServiceType(value) {
   }
 
   return value.trim()
+}
+
+function resolvePaymentMethodLabel(paymentMethods, paymentMethod, paymentMethodCode) {
+  const normalizedCode = String(paymentMethodCode ?? paymentMethod ?? '').trim().toLowerCase()
+
+  if (!normalizedCode) {
+    return String(paymentMethod ?? '').trim()
+  }
+
+  const match = Array.isArray(paymentMethods)
+    ? paymentMethods.find((method) => String(method?.module ?? method?.id ?? '').trim().toLowerCase() === normalizedCode)
+    : null
+
+  return String(match?.displayName ?? paymentMethod ?? paymentMethodCode ?? '').trim()
 }
 
 function resolveUsageAmountLabel(row) {
@@ -190,22 +201,13 @@ export function useDashboardBilling({
     setLoadingFlag('invoices', true)
 
     try {
-      const nextInvoices = await fetchInvoiceList(nativeRoutes.invoiceListUrl)
-      setInvoices(Array.isArray(nextInvoices) ? nextInvoices : [])
+      const payload = await dashboardWhmcsApi.getInvoices()
+      setInvoices(Array.isArray(payload?.invoices) ? payload.invoices : [])
       setInvoiceReadState((current) => ({
         ...current,
         listNativeFallbackRequired: false,
       }))
     } catch (error) {
-      if (isWhmcsHandoffError(error)) {
-        setInvoices([])
-        setInvoiceReadState((current) => ({
-          ...current,
-          listNativeFallbackRequired: true,
-        }))
-        return
-      }
-
       setInvoices([])
       setInvoiceReadState((current) => ({
         ...current,
@@ -215,7 +217,7 @@ export function useDashboardBilling({
     } finally {
       setLoadingFlag('invoices', false)
     }
-  }, [nativeRoutes.invoiceListUrl, setLoadingFlag, showErrorNotice, whmcsAccess.canUseCustomTicketsAndInvoices])
+  }, [setLoadingFlag, showErrorNotice, whmcsAccess.canUseCustomTicketsAndInvoices])
 
   const loadPaymentMethods = useCallback(async () => {
     if (isMoneyActionsBlocked(pricingContext)) {
@@ -262,25 +264,27 @@ export function useDashboardBilling({
     setDetailLoadingFlag('invoiceDetails', resolvedInvoiceId, true)
 
     try {
-      const invoiceListEntry = invoices.find((item) => String(item?.id ?? '') === resolvedInvoiceId)
-      const invoicePortalUrl =
-        options.portalUrl ||
-        invoiceDetails[resolvedInvoiceId]?.portalUrl ||
-        invoiceListEntry?.portalUrl ||
-        buildWhmcsClientAreaUrl('viewinvoice.php', {
-          id: resolvedInvoiceId,
-        })
-      const nextInvoice = await fetchInvoiceDetail(invoicePortalUrl, {
-        companyProfile: options.companyProfile,
-        currentClient: options.currentClient,
-      })
+      const payload = await dashboardWhmcsApi.getInvoice(resolvedInvoiceId)
+      const nextInvoice = payload?.invoice ?? null
 
       if (nextInvoice) {
+        const paymentMethodLabel = resolvePaymentMethodLabel(
+          paymentMethods,
+          nextInvoice.paymentMethod,
+          nextInvoice.paymentMethodCode,
+        )
+        const resolvedInvoice = {
+          ...nextInvoice,
+          paymentMethodLabel,
+        }
         setInvoiceDetails((current) => ({
           ...current,
-          [resolvedInvoiceId]: nextInvoice,
+          [resolvedInvoiceId]: resolvedInvoice,
         }))
-        setInvoices((current) => mergeItemById(current, nextInvoice))
+        setInvoices((current) => current.map((item) => String(item?.id ?? '') === resolvedInvoiceId ? {
+          ...item,
+          ...resolvedInvoice,
+        } : item))
         setInvoiceReadState((current) => ({
           ...current,
           detailNativeFallback: {
@@ -292,17 +296,6 @@ export function useDashboardBilling({
 
       return nextInvoice
     } catch (error) {
-      if (isWhmcsHandoffError(error)) {
-        setInvoiceReadState((current) => ({
-          ...current,
-          detailNativeFallback: {
-            ...current.detailNativeFallback,
-            [resolvedInvoiceId]: true,
-          },
-        }))
-        return null
-      }
-
       if (!options.silent) {
         showErrorNotice(error?.message || 'Unable to load the invoice details right now.')
       }
@@ -314,6 +307,7 @@ export function useDashboardBilling({
   }, [
     invoiceDetails,
     invoices,
+    paymentMethods,
     setDetailLoadingFlag,
     showErrorNotice,
     whmcsAccess.canUseCustomTicketsAndInvoices,

@@ -1,6 +1,8 @@
 export const DIRECT_AUTH_TOKEN_STORAGE_KEY = 'auth_token'
 export const DIRECT_AUTH_TOKEN_QUERY_PARAM = 'directAuthToken'
 
+let directAuthTokenRequestPromise = null
+
 export function isLocalDashboardHost() {
   if (typeof window === 'undefined') {
     return false
@@ -93,4 +95,24 @@ export function clearDirectAuthToken() {
   }
 
   window.localStorage.removeItem(DIRECT_AUTH_TOKEN_STORAGE_KEY)
+}
+
+export async function loadDirectAuthTokenOnce(fetchToken, options = {}) {
+  const { forceRefresh = false } = options
+  const storedToken = forceRefresh ? '' : readDirectAuthToken()
+
+  if (storedToken) {
+    return storedToken
+  }
+
+  if (!directAuthTokenRequestPromise) {
+    directAuthTokenRequestPromise = Promise.resolve()
+      .then(() => fetchToken())
+      .then((response) => persistDirectAuthToken(response?.directAuthToken ?? ''))
+      .finally(() => {
+        directAuthTokenRequestPromise = null
+      })
+  }
+
+  return directAuthTokenRequestPromise
 }

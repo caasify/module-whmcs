@@ -333,6 +333,7 @@ export const enMessages = {
   "invoice.descriptionLabel": "Description",
   "invoice.amountLabel": "Amount",
   "invoice.lineItemFallback": "Invoice line item",
+  "invoice.lineItemAddFunds": "Add funds",
   "invoice.subtotal": "Sub Total",
   "invoice.creditApplied": "Credit Applied",
   "invoice.total": "Total",

@@ -1,4 +1,4 @@
-import { persistDirectAuthToken } from './directAuth.js'
+import { loadDirectAuthTokenOnce } from './directAuth.js'
 import { dashboardWhmcsApi } from '../../dashboardWhmcsApi.js'
 import { readDashboardBootstrap } from '../../dashboardBootstrap.js'
 
@@ -98,10 +98,7 @@ async function parseApiResponse(response) {
 }
 
 async function resolveDirectAuthToken() {
-  const response = await dashboardWhmcsApi.getDirectAuthToken()
-  const token = response?.directAuthToken ?? ''
-
-  return persistDirectAuthToken(token)
+  return loadDirectAuthTokenOnce(() => dashboardWhmcsApi.getDirectAuthToken())
 }
 
 async function request(pathname, options = {}) {
