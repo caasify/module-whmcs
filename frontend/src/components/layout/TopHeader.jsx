@@ -76,6 +76,22 @@ export function TopHeader({
   const activeLanguage =
     supportedLanguages.find((language) => language.code === locale) ?? supportedLanguages[0]
   const clientAreaUrl = nativeRoutes?.clientAreaUrl || 'clientarea.php'
+  const avatarCharacter = (() => {
+    const sourceName = String(user.fullName || user.name || '').trim()
+
+    if (!sourceName) {
+      return 'U'
+    }
+
+    if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+      const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+      const segment = segmenter.segment(sourceName).containing(0)
+
+      return segment?.segment ?? sourceName.slice(0, 1)
+    }
+
+    return sourceName.slice(0, 1)
+  })()
 
   useEffect(() => {
     function handlePointerDown(event) {
@@ -201,9 +217,9 @@ export function TopHeader({
           <div className="hidden h-12 w-px bg-[var(--color-border)] sm:block" />
 
           <div className="hidden items-center gap-3 sm:flex">
-            <span className="type-body text-[var(--color-copy)]">{user.name}</span>
-            <span className="theme-button-primary type-body-strong flex h-11 w-11 items-center justify-center rounded-full border">
-              {user.initials}
+            <span dir="auto" className="type-body text-[var(--color-copy)]">{user.name}</span>
+            <span dir="ltr" className="theme-button-primary type-body-strong flex h-11 w-11 items-center justify-center rounded-full border">
+              {avatarCharacter}
             </span>
           </div>
 
