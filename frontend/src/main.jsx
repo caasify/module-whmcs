@@ -8,6 +8,8 @@ import {
   bootstrapDirectAuthTokenFromUrl,
   clearDirectAuthToken,
   isLocalDashboardHost,
+  persistDirectAuthToken,
+  readDirectAuthToken,
 } from './lib/services/server'
 import { readDashboardBootstrap } from './lib/dashboardBootstrap'
 import {
@@ -22,6 +24,12 @@ let dashboardBootstrap = null
 if (typeof window !== 'undefined') {
   bootstrapDirectAuthTokenFromUrl()
   dashboardBootstrap = readDashboardBootstrap()
+  const existingDirectAuthToken = readDirectAuthToken()
+
+  if (existingDirectAuthToken) {
+    persistDirectAuthToken(existingDirectAuthToken)
+  }
+
   const isPublicPricingView = dashboardBootstrap.isPublicPricingView === true
 
   if (

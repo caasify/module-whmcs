@@ -1,4 +1,5 @@
-import { readDirectAuthToken } from './directAuth.js'
+import { persistDirectAuthToken } from './directAuth.js'
+import { dashboardWhmcsApi } from '../../dashboardWhmcsApi.js'
 import { readDashboardBootstrap } from '../../dashboardBootstrap.js'
 
 export const DEFAULT_DIRECT_SERVER_API_BASE_URL = 'https://hub.caasify.com/server/v1'
@@ -96,8 +97,15 @@ async function parseApiResponse(response) {
   return text ? { message: text } : null
 }
 
+async function resolveDirectAuthToken() {
+  const response = await dashboardWhmcsApi.getDirectAuthToken()
+  const token = response?.directAuthToken ?? ''
+
+  return persistDirectAuthToken(token)
+}
+
 async function request(pathname, options = {}) {
-  const token = readDirectAuthToken()
+  const token = await resolveDirectAuthToken()
 
   if (!token) {
     throw new CaasifyDirectApiError('Missing direct browser auth token.', {
