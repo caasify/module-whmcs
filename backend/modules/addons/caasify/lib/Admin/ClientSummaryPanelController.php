@@ -97,6 +97,7 @@ final class ClientSummaryPanelController
                 'notice' => $notice,
                 'panelError' => null,
                 'realCurrency' => $realCurrency,
+                'whmcsClientId' => $clientId,
             ]);
         } catch (\Throwable $exception) {
             return $this->renderer->render([
@@ -125,6 +126,7 @@ final class ClientSummaryPanelController
                 'realDebt' => 0.0,
                 'realRemaining' => 0.0,
                 'realCurrency' => $this->currencies->findCurrencyByCode('EUR') ?? [],
+                'whmcsClientId' => $clientId,
             ]);
         }
     }

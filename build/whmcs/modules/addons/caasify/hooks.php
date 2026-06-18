@@ -117,11 +117,11 @@ add_hook('AdminAreaClientSummaryPage', 1, static function (array $vars): string 
         . rawurlencode($frameId);
 
     return '
-        <div style="margin-top:16px;">
+        <div style="margin-top:16px;clear:both;position:relative;z-index:1;background:#0b1220;">
             <iframe
                 id="' . htmlspecialchars($frameId, ENT_QUOTES, 'UTF-8') . '"
                 src="' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '"
-                style="width:100%;min-height:520px;border:0;display:block;background:transparent;"
+                style="width:100%;min-height:560px;border:0;display:block;background:#0b1220;"
                 loading="lazy"
             ></iframe>
         </div>
@@ -156,7 +156,7 @@ add_hook('AdminAreaClientSummaryPage', 1, static function (array $vars): string 
                         return;
                     }
 
-                    var targetHeight = Math.max(520, Math.ceil(nextHeight));
+                    var targetHeight = Math.max(560, Math.ceil(nextHeight) + 24);
                     var currentHeight = Number(frame.getAttribute("data-caasifyHeight") || 0);
 
                     if (Math.abs(currentHeight - targetHeight) < 2) {

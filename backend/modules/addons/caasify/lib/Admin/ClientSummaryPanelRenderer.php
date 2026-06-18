@@ -49,6 +49,8 @@ final class ClientSummaryPanelRenderer
         $brandName = WhmcsCompanyProfile::getName('Company');
         $moneyActionsBlocked = ($pricingContext['moneyActionsBlocked'] ?? false) === true;
         $moneyActionsBlockedReason = (string) ($pricingContext['moneyActionsBlockedReason'] ?? '');
+        $caasifyUserId = $this->normalizeNullableString($viewModel['caasifyUserId'] ?? null) ?? '—';
+        $whmcsClientId = (int) ($viewModel['whmcsClientId'] ?? 0);
         $displayModeTitle = $displayMode === 'converted'
             ? $this->formatCurrencyLabel('Customer Visible Values', $displayCurrencyMarker)
             : $this->formatCurrencyLabel('Customer View', $realCurrencyMarker, 'Fallback');
@@ -77,43 +79,42 @@ final class ClientSummaryPanelRenderer
     <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
     <style>
         :root {
-            color-scheme: light;
-            --background: #f8f9fb;
-            --surface: #ffffff;
-            --surface-low: #f3f4f6;
-            --surface-mid: #edeef0;
-            --surface-high: #e1e2e4;
-            --outline: #c3c6d6;
-            --outline-strong: #737685;
-            --primary: #0052cc;
-            --primary-deep: #003d9b;
-            --on-surface: #191c1e;
-            --on-surface-variant: #434654;
-            --success: #1b7f46;
-            --danger: #ba1a1a;
-            --danger-soft: #ffdad6;
-            --success-soft: #e8f5ec;
-            --shadow-soft: 0 2px 4px rgba(17, 43, 77, 0.05);
-            --shadow-hover: 0 8px 16px rgba(17, 43, 77, 0.08);
+            color-scheme: dark;
+            --background: #0b1220;
+            --surface: #111827;
+            --surface-low: #0f172a;
+            --surface-mid: #1f2937;
+            --surface-high: #243244;
+            --outline: #334155;
+            --outline-strong: #64748b;
+            --primary: #60a5fa;
+            --primary-deep: #2563eb;
+            --on-surface: #e5eefc;
+            --on-surface-variant: #9fb0c7;
+            --success: #4ade80;
+            --danger: #f87171;
+            --danger-soft: rgba(248, 113, 113, 0.12);
+            --success-soft: rgba(74, 222, 128, 0.12);
+            --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.24);
+            --shadow-hover: 0 14px 28px rgba(0, 0, 0, 0.28);
         }
 
         * {
             box-sizing: border-box;
         }
 
+        html,
+        body {
+            width: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             margin: 0;
             padding: 16px;
-            background: transparent;
+            background: var(--background);
             color: var(--on-surface);
             font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-
-        .shell {
-            border: 1px solid var(--outline);
-            border-radius: 8px;
-            background: var(--background);
-            padding: 16px;
         }
 
         .notice {
@@ -133,7 +134,7 @@ final class ClientSummaryPanelRenderer
 
         .notice-error {
             background: var(--danger-soft);
-            color: #93000a;
+            color: #fecaca;
             border-left-color: var(--danger);
         }
 
@@ -141,6 +142,12 @@ final class ClientSummaryPanelRenderer
             display: flex;
             flex-direction: column;
             gap: 24px;
+        }
+
+        .summary-grid {
+            display: grid;
+            gap: 24px;
+            grid-template-columns: 1fr;
         }
 
         .card {
@@ -180,7 +187,7 @@ final class ClientSummaryPanelRenderer
 
         .search-field {
             position: relative;
-            min-width: 240px;
+            min-width: 0;
             max-width: 280px;
             flex: 1 1 240px;
         }
@@ -232,12 +239,6 @@ final class ClientSummaryPanelRenderer
             color: var(--on-surface-variant);
         }
 
-        .summary-grid {
-            display: grid;
-            gap: 24px;
-            grid-template-columns: minmax(0, 1.15fr) repeat(2, minmax(0, 1fr));
-        }
-
         .summary-block {
             display: flex;
             flex-direction: column;
@@ -256,6 +257,28 @@ final class ClientSummaryPanelRenderer
 
         .summary-block-title.is-muted {
             color: var(--on-surface-variant);
+        }
+
+        .summary-block-copy {
+            margin: 0;
+            color: var(--on-surface-variant);
+            font-size: 14px;
+            line-height: 20px;
+        }
+
+        .summary-block-copy.is-strong {
+            color: var(--on-surface);
+        }
+
+        .summary-note {
+            margin: 0;
+            padding: 10px 12px;
+            border: 1px solid var(--outline);
+            border-radius: 8px;
+            background: var(--surface-low);
+            color: var(--on-surface-variant);
+            font-size: 13px;
+            line-height: 1.55;
         }
 
         .charge-stack {
@@ -307,6 +330,7 @@ final class ClientSummaryPanelRenderer
             color: var(--on-surface-variant);
             font-size: 14px;
             line-height: 20px;
+            min-width: 0;
         }
 
         .summary-line-value {
@@ -316,6 +340,42 @@ final class ClientSummaryPanelRenderer
             line-height: 20px;
             font-variant-numeric: tabular-nums;
             text-align: right;
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .balance-summary-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .balance-summary-grid {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            align-items: start;
+        }
+
+        .balance-summary-box {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 0;
+            width: 100%;
+            border: 1px solid var(--outline);
+            border-radius: 12px;
+            background: var(--surface-low);
+            padding: 16px;
+            overflow: hidden;
+        }
+
+        .balance-summary-box-title {
+            margin: 0;
+            color: var(--on-surface);
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 20px;
         }
 
         .charge-actions {
@@ -342,12 +402,12 @@ final class ClientSummaryPanelRenderer
 
         .charge-button-primary {
             background: var(--primary);
-            color: #ffffff;
+            color: #06111f;
         }
 
         .charge-button-danger {
             background: var(--danger-soft);
-            color: #93000a;
+            color: #fecaca;
             border-color: rgba(186, 26, 26, 0.18);
         }
 
@@ -357,19 +417,21 @@ final class ClientSummaryPanelRenderer
             border-radius: 8px;
             background: var(--danger-soft);
             padding: 12px 14px;
-            color: #93000a;
+            color: #fecaca;
             font-size: 13px;
             line-height: 1.55;
         }
 
         .table-wrap {
-            overflow-x: auto;
+            overflow-x: hidden;
+            width: 100%;
         }
 
         table {
             width: 100%;
-            min-width: 980px;
+            min-width: 0;
             border-collapse: collapse;
+            table-layout: fixed;
         }
 
         th {
@@ -553,7 +615,7 @@ final class ClientSummaryPanelRenderer
             width: 16px;
             height: 16px;
             border-radius: 50%;
-            background: #ffffff;
+            background: #dbeafe;
             transition: transform 0.16s ease;
         }
 
@@ -569,7 +631,7 @@ final class ClientSummaryPanelRenderer
             height: 18px;
             background: transparent;
             border: 2px solid rgba(255, 255, 255, 0.35);
-            border-top-color: #ffffff;
+            border-top-color: #dbeafe;
             box-shadow: none;
             transform: none;
             animation: power-spinner 0.7s linear infinite;
@@ -620,7 +682,7 @@ final class ClientSummaryPanelRenderer
             width: 14px;
             height: 14px;
             border-radius: 50%;
-            border: 2px solid rgba(0, 82, 204, 0.18);
+            border: 2px solid rgba(96, 165, 250, 0.18);
             border-top-color: var(--primary);
             animation: power-spinner 0.7s linear infinite;
         }
@@ -736,12 +798,6 @@ final class ClientSummaryPanelRenderer
             }
         }
 
-        @media (max-width: 980px) {
-            .summary-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
         @media (max-width: 720px) {
             body {
                 padding: 10px;
@@ -764,14 +820,15 @@ final class ClientSummaryPanelRenderer
                 max-width: none;
             }
 
-            table {
-                min-width: 860px;
+            .balance-summary-grid {
+                grid-template-columns: 1fr;
             }
+
         }
     </style>
 </head>
 <body>
-    <div class="shell" data-panel-shell>
+    <div data-panel-shell>
         <?php if ($notice !== null): ?>
             <div class="notice <?= ($notice['type'] ?? '') === 'success' ? 'notice-success' : 'notice-error' ?>">
                 <?= $this->escape($notice['message'] ?? '') ?>
@@ -782,20 +839,29 @@ final class ClientSummaryPanelRenderer
             <div class="panel-error"><?= $this->escape($panelError) ?></div>
         <?php else: ?>
             <div class="panel-stack">
-                <section class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">Client Summary</h2>
-                    </div>
-
-                    <div class="summary-grid">
+                <div class="summary-grid">
+                    <section class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">User Info</h2>
+                        </div>
                         <div class="summary-block">
-                            <h3 class="summary-block-title">Charge Amount</h3>
+                            <p class="summary-block-copy">WHMCS Client ID: <span class="table-ip"><?= $this->escape((string) $whmcsClientId) ?></span></p>
+                            <p class="summary-block-copy">Caasify User ID: <span class="table-ip"><?= $this->escape($caasifyUserId) ?></span></p>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Increase/Decrease Balance</h2>
+                        </div>
+                        <div class="summary-block">
+                            <p class="summary-block-copy is-strong">Adjust the client’s internal balance by entering a positive or negative amount.</p>
                             <form method="post" action="<?= $formAction ?>" novalidate>
                                 <input type="hidden" name="csrfToken" value="<?= $csrfToken ?>">
                                 <input type="hidden" name="panelAction" value="updateBalance">
                                 <div class="charge-stack">
                                     <label class="charge-field" for="chargeAmountInput">
-                                        <span class="charge-field-label"><?= $this->escape($realChargeLabel) ?></span>
+                                        <span class="charge-field-label">Real amount to apply</span>
                                         <input
                                             id="chargeAmountInput"
                                             class="charge-value"
@@ -808,7 +874,7 @@ final class ClientSummaryPanelRenderer
                                         >
                                     </label>
                                     <label class="charge-field">
-                                        <span class="charge-field-label"><?= $this->escape($chargePreviewLabel) ?></span>
+                                        <span class="charge-field-label">Customer-visible preview</span>
                                         <input
                                             class="charge-preview"
                                             type="text"
@@ -822,82 +888,92 @@ final class ClientSummaryPanelRenderer
                                     </div>
                                 </div>
                             </form>
-                            <div class="summary-line">
-                                <span class="summary-line-label">Admin Balance</span>
-                                <span class="summary-line-value"><?= $this->escape($adminRealBalance) ?></span>
+                            <div class="balance-summary-stack">
+                                <div class="balance-summary-box">
+                                    <h3 class="balance-summary-box-title">Admin Balance</h3>
+                                    <div class="summary-line">
+                                        <span class="summary-line-label">Available</span>
+                                        <span class="summary-line-value"><?= $this->escape($adminRealBalance) ?></span>
+                                    </div>
+                                </div>
+
+                                <div class="balance-summary-grid">
+                                    <div class="balance-summary-box">
+                                        <h3 class="balance-summary-box-title"><?= $this->escape($realSummaryLabel) ?></h3>
+                                        <div class="summary-block">
+                                            <?= $this->renderMetricRow('Balance', $realBalance) ?>
+                                            <?= $this->renderMetricRow('Debt', $realDebt) ?>
+                                            <?= $this->renderMetricRow('Remaining', $realRemaining) ?>
+                                        </div>
+                                    </div>
+
+                                    <div class="balance-summary-box">
+                                        <h3 class="balance-summary-box-title">Customer Visible Values</h3>
+                                        <div class="summary-block">
+                                            <?= $this->renderMetricRow('Balance', $commissionBalance) ?>
+                                            <?= $this->renderMetricRow('Debt', $commissionDebt) ?>
+                                            <?= $this->renderMetricRow('Remaining', $commissionRemaining) ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php if ($moneyActionsBlocked): ?>
+                                <div class="money-blocked"><?= $this->escape($moneyActionsBlockedMessage) ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Servers</h2>
+                            <div class="toolbar">
+                                <label class="search-field">
+                                    <?= $this->renderSearchIcon() ?>
+                                    <input class="search-input" type="text" placeholder="Search servers...">
+                                </label>
+                                <button type="button" class="sort-button">
+                                    <?= $this->renderSortIcon() ?>
+                                    <span>Sort</span>
+                                </button>
                             </div>
                         </div>
 
-                        <div class="summary-block">
-                            <h3 class="summary-block-title is-muted"><?= $this->escape($realSummaryLabel) ?></h3>
-                            <?= $this->renderMetricRow('Balance', $realBalance) ?>
-                            <?= $this->renderMetricRow('Debt', $realDebt) ?>
-                            <?= $this->renderMetricRow('Remaining', $realRemaining) ?>
-                        </div>
-
-                        <div class="summary-block">
-                            <h3 class="summary-block-title is-muted"><?= $this->escape($displayModeTitle) ?></h3>
-                            <?= $this->renderMetricRow('Balance', $commissionBalance) ?>
-                            <?= $this->renderMetricRow('Debt', $commissionDebt) ?>
-                            <?= $this->renderMetricRow('Remaining', $commissionRemaining) ?>
-                        </div>
-                    </div>
-
-                    <?php if ($moneyActionsBlocked): ?>
-                        <div class="money-blocked"><?= $this->escape($moneyActionsBlockedMessage) ?></div>
-                    <?php endif; ?>
-                </section>
-
-                <section class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">Client Servers</h2>
-                        <div class="toolbar" aria-hidden="true">
-                            <label class="search-field">
-                                <?= $this->renderSearchIcon() ?>
-                                <input class="search-input" type="text" placeholder="Search servers..." readonly tabindex="-1">
-                            </label>
-                            <button type="button" class="sort-button" tabindex="-1">
-                                <?= $this->renderSortIcon() ?>
-                                <span>Sort</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <?php if ($orders === []): ?>
-                        <div class="empty-state">No server orders found for this client yet.</div>
-                    <?php else: ?>
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Name</th>
-                                        <th>Datacenter</th>
-                                        <th>Location</th>
-                                        <th>IP Address</th>
-                                        <th class="column-price">Price</th>
-                                        <th class="column-actions">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($orders as $order): ?>
-                                        <?= $this->renderServerListItem($order, $formActionValue, $csrfTokenValue, $displayCurrency, $displayCurrencyFormatValue) ?>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="table-footer">
-                            <div class="table-footer-copy">
-                                Showing <strong>1-<?= $this->escape((string) $orderCount) ?></strong> of <strong><?= $this->escape((string) $orderCount) ?></strong> items
+                        <?php if ($orders === []): ?>
+                            <div class="empty-state">No server orders found for this client yet.</div>
+                        <?php else: ?>
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Name</th>
+                                            <th>Datacenter</th>
+                                            <th>Location</th>
+                                            <th>IP Address</th>
+                                            <th class="column-price">Price</th>
+                                            <th class="column-actions">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($orders as $order): ?>
+                                            <?= $this->renderServerListItem($order, $formActionValue, $csrfTokenValue, $displayCurrency, $displayCurrencyFormatValue) ?>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="pager" aria-hidden="true">
-                                <span class="page-arrow"><?= $this->renderChevronLeftIcon() ?></span>
-                                <span class="page-indicator">1</span>
-                                <span class="page-arrow"><?= $this->renderChevronRightIcon() ?></span>
+                            <div class="table-footer">
+                                <div class="table-footer-copy">
+                                    Showing <strong>1-<?= $this->escape((string) $orderCount) ?></strong> of <strong><?= $this->escape((string) $orderCount) ?></strong> items
+                                </div>
+                                <div class="pager" aria-hidden="true">
+                                    <span class="page-arrow"><?= $this->renderChevronLeftIcon() ?></span>
+                                    <span class="page-indicator">1</span>
+                                    <span class="page-arrow"><?= $this->renderChevronRightIcon() ?></span>
+                                </div>
                             </div>
-                        </div>
-                    <?php endif; ?>
-                </section>
+                        <?php endif; ?>
+                    </section>
+                </div>
             </div>
         <?php endif; ?>
     </div>
