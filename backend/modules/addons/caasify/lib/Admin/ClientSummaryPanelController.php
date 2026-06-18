@@ -25,14 +25,27 @@ final class ClientSummaryPanelController
     private const POWER_POLL_ATTEMPTS = 10;
     private const POWER_POLL_INTERVAL_SECONDS = 3;
 
+    private DashboardSettings $settings;
+    private ResolveClientAuthToken $authTokenResolver;
+    private ClientSummaryOrderMapper $orderMapper;
+    private ClientPricingService $pricing;
+    private WhmcsCurrencyRepository $currencies;
+    private ClientSummaryPanelRenderer $renderer;
+
     public function __construct(
-        private readonly DashboardSettings $settings = new DashboardSettings(),
-        private readonly ResolveClientAuthToken $authTokenResolver = new ResolveClientAuthToken(),
-        private readonly ClientSummaryOrderMapper $orderMapper = new ClientSummaryOrderMapper(),
-        private readonly ClientPricingService $pricing = new ClientPricingService(),
-        private readonly WhmcsCurrencyRepository $currencies = new WhmcsCurrencyRepository(),
-        private readonly ClientSummaryPanelRenderer $renderer = new ClientSummaryPanelRenderer()
+        ?DashboardSettings $settings = null,
+        ?ResolveClientAuthToken $authTokenResolver = null,
+        ?ClientSummaryOrderMapper $orderMapper = null,
+        ?ClientPricingService $pricing = null,
+        ?WhmcsCurrencyRepository $currencies = null,
+        ?ClientSummaryPanelRenderer $renderer = null
     ) {
+        $this->settings = $settings ?? new DashboardSettings();
+        $this->authTokenResolver = $authTokenResolver ?? new ResolveClientAuthToken();
+        $this->orderMapper = $orderMapper ?? new ClientSummaryOrderMapper();
+        $this->pricing = $pricing ?? new ClientPricingService();
+        $this->currencies = $currencies ?? new WhmcsCurrencyRepository();
+        $this->renderer = $renderer ?? new ClientSummaryPanelRenderer();
     }
 
     /**
@@ -44,6 +57,7 @@ final class ClientSummaryPanelController
         $csrfToken = AdminClientSummaryCsrf::issueToken();
         $chargeAmount = $this->normalizeChargeAmountInput($requestData['chargeAmount'] ?? null);
         $notice = null;
+        $warnings = [];
 
         if (!$this->clientExists($clientId)) {
             return $this->renderer->renderSimpleDocument($brandName, 'The requested client could not be found.');
@@ -63,6 +77,7 @@ final class ClientSummaryPanelController
                 $this->loadPanelData($clientId, $adminToken, $adminSettings['hubBaseUrl'] ?? null),
                 $pricingContext
             );
+            $warnings = is_array($panelData['warnings'] ?? null) ? $panelData['warnings'] : [];
 
             if (strtoupper($requestMethod) === 'POST') {
                 $requestedAction = $this->resolveRequestedAction($requestData);
@@ -85,6 +100,7 @@ final class ClientSummaryPanelController
                         $this->loadPanelData($clientId, $adminToken, $adminSettings['hubBaseUrl'] ?? null),
                         $pricingContext
                     );
+                    $warnings = is_array($panelData['warnings'] ?? null) ? $panelData['warnings'] : [];
                 }
             }
 
@@ -95,6 +111,7 @@ final class ClientSummaryPanelController
                 'formAction' => $formAction,
                 'frameId' => $frameId,
                 'notice' => $notice,
+                'warnings' => $warnings,
                 'panelError' => null,
                 'realCurrency' => $realCurrency,
                 'whmcsClientId' => $clientId,
@@ -112,6 +129,7 @@ final class ClientSummaryPanelController
                 'formAction' => $formAction,
                 'frameId' => $frameId,
                 'notice' => $notice,
+                'warnings' => [],
                 'orders' => [],
                 'panelError' => $exception->getMessage() !== '' ? $exception->getMessage() : 'Unable to load the ' . $brandName . ' admin panel right now.',
                 'pricingContext' => [
@@ -371,6 +389,7 @@ final class ClientSummaryPanelController
     {
         $clientToken = $this->authTokenResolver->handle($clientId, $adminToken);
         $client = $this->createApiClient($hubBaseUrl);
+        $warnings = [];
 
         $clientProfilePayload = $client->getProfile($clientToken);
         $clientProfile = $this->extractPayloadData($clientProfilePayload);
@@ -381,32 +400,56 @@ final class ClientSummaryPanelController
             throw new \RuntimeException(WhmcsCompanyProfile::getName('Company') . ' client profile did not include a user id.');
         }
 
-        $ordersPayload = $client->getOrders($clientToken, 1);
-        $orders = $this->mergeMonitoringStatuses(
-            $this->extractPayloadList($ordersPayload, 'data'),
-            $client,
-            $clientToken
-        );
-        $resellerProfilePayload = $client->getProfile($adminToken);
-        $resellerProfile = $this->extractPayloadData($resellerProfilePayload);
         $realBalance = $this->extractAmount($clientProfile['balance'] ?? null) ?? 0.0;
         $realDebt = $this->extractAmount($clientProfile['debt'] ?? null) ?? 0.0;
         $realRemaining = $this->extractAmount($clientProfile['available_balance'] ?? null) ?? ($realBalance - $realDebt);
-        $adminRealBalance = $this->extractAmount($resellerProfile['balance'] ?? null) ?? 0.0;
-        $adminBalance = $this->extractAmount($resellerProfile['available_balance'] ?? null)
-            ?? $adminRealBalance
-            ?? 0.0;
+        $orders = [];
+
+        try {
+            $ordersPayload = $client->getOrders($clientToken, 1);
+            $orders = $this->mergeMonitoringStatuses(
+                $this->extractPayloadList($ordersPayload, 'data'),
+                $client,
+                $clientToken
+            );
+        } catch (\Throwable $exception) {
+            $warnings[] = $this->buildLoadWarning(
+                'Orders could not be loaded. Showing an empty list instead.',
+                $exception
+            );
+        }
+
+        $adminRealBalance = 0.0;
+        $adminBalance = 0.0;
+
+        try {
+            $resellerProfilePayload = $client->getProfile($adminToken);
+            $resellerProfile = $this->extractPayloadData($resellerProfilePayload);
+            $adminRealBalance = $this->extractAmount($resellerProfile['balance'] ?? null) ?? 0.0;
+            $adminBalance = $this->extractAmount($resellerProfile['available_balance'] ?? null)
+                ?? $adminRealBalance
+                ?? 0.0;
+        } catch (\Throwable $exception) {
+            $warnings[] = $this->buildLoadWarning(
+                'Reseller profile could not be loaded. Showing safe admin balance defaults instead.',
+                $exception
+            );
+        }
 
         return [
             'adminBalance' => $adminBalance,
             'adminRealBalance' => $adminRealBalance,
             'caasifyUserId' => $caasifyUserId,
+            'caasifyProfileResponse' => $clientProfilePayload,
+            'caasifyProfileStatus' => 200,
+            'caasifyProfileUrl' => '/server/v1/profile/show',
             'clientToken' => $clientToken,
             'orders' => $this->orderMapper->mapList($orders),
             'rawOrders' => $orders,
             'realBalance' => $realBalance,
             'realDebt' => $realDebt,
             'realRemaining' => $realRemaining,
+            'warnings' => $warnings,
         ];
     }
 
@@ -462,6 +505,17 @@ final class ClientSummaryPanelController
         return $resolvedBaseUrl !== ''
             ? new CaasifyApiClient($resolvedBaseUrl)
             : new CaasifyApiClient();
+    }
+
+    private function buildLoadWarning(string $message, \Throwable $exception): string
+    {
+        $detail = $exception->getMessage();
+
+        if ($detail === '') {
+            return $message;
+        }
+
+        return $message . ' ' . $detail;
     }
 
     private function clientExists(int $clientId): bool
