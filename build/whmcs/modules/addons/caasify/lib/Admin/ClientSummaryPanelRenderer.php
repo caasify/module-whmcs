@@ -15,6 +15,7 @@ final class ClientSummaryPanelRenderer
     public function render(array $viewModel): string
     {
         $notice = is_array($viewModel['notice'] ?? null) ? $viewModel['notice'] : null;
+        $warnings = is_array($viewModel['warnings'] ?? null) ? $viewModel['warnings'] : [];
         $orders = is_array($viewModel['orders'] ?? null) ? $viewModel['orders'] : [];
         $orderCount = count($orders);
         $panelError = $this->normalizeNullableString($viewModel['panelError'] ?? null);
@@ -59,12 +60,15 @@ final class ClientSummaryPanelRenderer
             : $this->formatCurrencyLabel('Customer-visible amount', $realCurrencyMarker, 'fallback');
         $realChargeLabel = $this->formatInlineCurrencyLabel('Real', $realCurrencyMarker);
         $realSummaryLabel = $this->formatCurrencyLabel('Real', $realCurrencyMarker);
-        $moneyActionsBlockedMessage = match ($moneyActionsBlockedReason) {
-            'currency_disabled' => 'Client pricing is currently showing raw EUR because ' . $clientCurrencyCode . ' is disabled in ' . $brandName . ' pricing. Customer money actions stay blocked until that currency is enabled.',
-            'missing_eur_rate' => 'Client pricing is currently showing raw EUR because no valid EUR rate is configured for ' . $clientCurrencyCode . '. Customer money actions stay blocked until that currency has a valid EUR rate.',
-            'missing_client_currency' => 'Client pricing is currently showing raw EUR because this client does not have a valid WHMCS currency mapping yet. Customer money actions stay blocked until that currency is configured.',
-            default => 'Client pricing is currently showing raw EUR because the client currency is not fully configured in ' . $brandName . ' pricing. Customer money actions stay blocked until that currency is enabled and has a valid EUR rate.',
-        };
+        if ($moneyActionsBlockedReason === 'currency_disabled') {
+            $moneyActionsBlockedMessage = 'Client pricing is currently showing raw EUR because ' . $clientCurrencyCode . ' is disabled in ' . $brandName . ' pricing. Customer money actions stay blocked until that currency is enabled.';
+        } elseif ($moneyActionsBlockedReason === 'missing_eur_rate') {
+            $moneyActionsBlockedMessage = 'Client pricing is currently showing raw EUR because no valid EUR rate is configured for ' . $clientCurrencyCode . '. Customer money actions stay blocked until that currency has a valid EUR rate.';
+        } elseif ($moneyActionsBlockedReason === 'missing_client_currency') {
+            $moneyActionsBlockedMessage = 'Client pricing is currently showing raw EUR because this client does not have a valid WHMCS currency mapping yet. Customer money actions stay blocked until that currency is configured.';
+        } else {
+            $moneyActionsBlockedMessage = 'Client pricing is currently showing raw EUR because the client currency is not fully configured in ' . $brandName . ' pricing. Customer money actions stay blocked until that currency is enabled and has a valid EUR rate.';
+        }
 
         ob_start();
         ?>
@@ -136,6 +140,12 @@ final class ClientSummaryPanelRenderer
             background: var(--danger-soft);
             color: #fecaca;
             border-left-color: var(--danger);
+        }
+
+        .notice-warning {
+            background: rgba(251, 191, 36, 0.12);
+            color: #fde68a;
+            border-left-color: #f59e0b;
         }
 
         .panel-stack {
@@ -216,26 +226,6 @@ final class ClientSummaryPanelRenderer
         }
 
         .search-input::placeholder {
-            color: var(--on-surface-variant);
-        }
-
-        .sort-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            border: 1px solid var(--outline);
-            border-radius: 8px;
-            background: var(--surface);
-            padding: 8px 12px;
-            color: var(--on-surface);
-            font-size: 13px;
-            font-weight: 600;
-            line-height: 16px;
-        }
-
-        .sort-button svg {
-            width: 16px;
-            height: 16px;
             color: var(--on-surface-variant);
         }
 
@@ -830,10 +820,18 @@ final class ClientSummaryPanelRenderer
 <body>
     <div data-panel-shell>
         <?php if ($notice !== null): ?>
-            <div class="notice <?= ($notice['type'] ?? '') === 'success' ? 'notice-success' : 'notice-error' ?>">
+            <div class="notice <?= ($notice['type'] ?? '') === 'success' ? 'notice-success' : (($notice['type'] ?? '') === 'warning' ? 'notice-warning' : 'notice-error') ?>">
                 <?= $this->escape($notice['message'] ?? '') ?>
             </div>
         <?php endif; ?>
+
+        <?php foreach ($warnings as $warning): ?>
+            <?php if (is_array($warning) && ($warning['message'] ?? '') !== ''): ?>
+                <div class="notice notice-warning"><?= $this->escape((string) $warning['message']) ?></div>
+            <?php elseif (is_string($warning) && $warning !== ''): ?>
+                <div class="notice notice-warning"><?= $this->escape($warning) ?></div>
+            <?php endif; ?>
+        <?php endforeach; ?>
 
         <?php if ($panelError !== null): ?>
             <div class="panel-error"><?= $this->escape($panelError) ?></div>
@@ -931,10 +929,6 @@ final class ClientSummaryPanelRenderer
                                     <?= $this->renderSearchIcon() ?>
                                     <input class="search-input" type="text" placeholder="Search servers...">
                                 </label>
-                                <button type="button" class="sort-button">
-                                    <?= $this->renderSortIcon() ?>
-                                    <span>Sort</span>
-                                </button>
                             </div>
                         </div>
 
@@ -1343,11 +1337,6 @@ final class ClientSummaryPanelRenderer
     private function renderSearchIcon(): string
     {
         return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/></svg>';
-    }
-
-    private function renderSortIcon(): string
-    {
-        return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
     }
 
     private function renderChevronLeftIcon(): string
