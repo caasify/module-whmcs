@@ -164,10 +164,9 @@ final class CaasifyApiClient
         }
 
         return $this->postForm(
-            '/api/v1/backend/users/' . rawurlencode($caasifyUserId) . '/transactions/increase',
+            '/server/v1/users/' . rawurlencode($caasifyUserId) . '/transactions/increase',
             [
                 'amount' => $this->normalizeAmount($amount),
-                'reference' => $reference,
             ],
             [
                 'Authorization: Bearer ' . $adminToken,
@@ -189,13 +188,9 @@ final class CaasifyApiClient
         }
 
         return $this->postForm(
-            '/api/v1/backend/users/' . rawurlencode($caasifyUserId) . '/transactions/decrease',
+            '/server/v1/users/' . rawurlencode($caasifyUserId) . '/transactions/decrease',
             [
                 'amount' => $this->normalizeAmount($amount),
-                'type' => 'balance',
-                'invoiceid' => $reference,
-                'status' => 'paid',
-                'reference' => $reference,
             ],
             [
                 'Authorization: Bearer ' . $adminToken,

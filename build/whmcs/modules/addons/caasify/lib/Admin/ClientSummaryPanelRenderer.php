@@ -886,6 +886,11 @@ final class ClientSummaryPanelRenderer
                                     </div>
                                 </div>
                             </form>
+                            <?php if ($notice !== null): ?>
+                                <div class="notice <?= ($notice['type'] ?? '') === 'success' ? 'notice-success' : (($notice['type'] ?? '') === 'warning' ? 'notice-warning' : 'notice-error') ?>">
+                                    <?= $this->escape($notice['message'] ?? '') ?>
+                                </div>
+                            <?php endif; ?>
                             <div class="balance-summary-stack">
                                 <div class="balance-summary-box">
                                     <h3 class="balance-summary-box-title">Admin Balance</h3>
