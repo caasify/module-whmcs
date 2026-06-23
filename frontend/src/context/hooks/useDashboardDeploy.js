@@ -10,7 +10,7 @@ import {
   mapCountriesToDeployLocations,
   resolveDeployPlanOffer,
 } from '../../lib/services/server'
-import { createMessageNotice, createNotice } from '../dashboardNotices'
+import { createNotice } from '../dashboardNotices'
 import { isMoneyActionsBlocked } from '../../lib/pricing'
 
 function parseCreatedServerId(payload) {
@@ -31,12 +31,15 @@ export function useDashboardDeploy({
   loadServerDetail,
   pricingContext,
   refreshDirectServerOverview,
+  walletBalanceReady,
+  walletBalance,
   setNotice,
 }) {
   const [deployLocations, setDeployLocations] = useState([])
   const [deployCategories, setDeployCategories] = useState([])
   const [deployPlans, setDeployPlans] = useState([])
   const [deployDraft, setDeployDraft] = useState(() => createInitialDeployDraft([]))
+  const [deployErrorMessage, setDeployErrorMessage] = useState('')
   const [loading, setLoading] = useState({
     locations: true,
     plans: false,
@@ -258,15 +261,25 @@ export function useDashboardDeploy({
   }, [deployLocations, deployPlans])
 
   const startDeploy = useCallback(() => {
+    setDeployErrorMessage('')
     setDeployDraft(createInitialDeployDraft(deployLocations))
   }, [deployLocations])
 
+  const dismissDeployError = useCallback(() => {
+    setDeployErrorMessage('')
+  }, [])
+
   const confirmDeployment = useCallback(async () => {
+    if (
+      walletBalanceReady
+      && (!Number.isFinite(Number(walletBalance)) || Number(walletBalance) <= 0)
+    ) {
+      setDeployErrorMessage('deploy.configure.balanceInsufficient')
+      return null
+    }
+
     if (isMoneyActionsBlocked(pricingContext)) {
-      setNotice(createMessageNotice(
-        'error',
-        'Deployment is temporarily unavailable because pricing for your currency is not configured yet.',
-      ))
+      setDeployErrorMessage('billing.pricingUnavailable')
       return null
     }
 
@@ -278,12 +291,21 @@ export function useDashboardDeploy({
 
     try {
       const response = await caasifyServerApi.createOrder(payload)
+      const responseMessage = typeof response?.message === 'string' ? response.message.trim() : ''
       const createdServerId = parseCreatedServerId(response)
 
-      await refreshDirectServerOverview()
-      if (createdServerId) {
-        await loadServerDetail(createdServerId)
+      if (responseMessage) {
+        setDeployErrorMessage(responseMessage)
+        return null
       }
+
+      if (!createdServerId) {
+        setDeployErrorMessage('deploy.configure.deployFailedFallback')
+        return null
+      }
+
+      await refreshDirectServerOverview()
+      await loadServerDetail(createdServerId)
       setNotice(createNotice('success', 'notices.deploymentSuccess', {
         name: deployDraft.serverName || selectedDeployPlan.title,
       }))
@@ -296,7 +318,7 @@ export function useDashboardDeploy({
 
       return null
     }
-  }, [deployDraft, loadServerDetail, pricingContext, refreshDirectServerOverview, selectedDeployPlan, setNotice])
+  }, [deployDraft, loadServerDetail, pricingContext, refreshDirectServerOverview, selectedDeployPlan, setNotice, walletBalance, walletBalanceReady])
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -322,6 +344,7 @@ export function useDashboardDeploy({
     confirmDeployment,
     deployCategories,
     deployDraft,
+    deployErrorMessage,
     deployLocations,
     deployPlans,
     loading,
@@ -338,6 +361,7 @@ export function useDashboardDeploy({
     selectedDeployPlan,
     selectedDeploySystem,
     startDeploy,
+    dismissDeployError,
     updateDeployDraft,
   }
 }

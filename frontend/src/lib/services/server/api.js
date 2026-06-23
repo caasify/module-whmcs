@@ -101,7 +101,7 @@ async function resolveDirectAuthToken() {
   return loadDirectAuthTokenOnce(() => dashboardWhmcsApi.getDirectAuthToken())
 }
 
-async function request(pathname, options = {}) {
+async function performRequest(pathname, options = {}) {
   const token = await resolveDirectAuthToken()
 
   if (!token) {
@@ -159,6 +159,15 @@ async function request(pathname, options = {}) {
 
   const response = await fetch(url, requestInit)
   const payload = await parseApiResponse(response)
+
+  return {
+    payload,
+    response,
+  }
+}
+
+async function request(pathname, options = {}) {
+  const { payload, response } = await performRequest(pathname, options)
 
   if (!response.ok) {
     throw new CaasifyDirectApiError(
@@ -218,10 +227,11 @@ export const caasifyServerApi = {
     return request(`/orders/${orderId}/view`)
   },
   createOrder(form) {
-    return request('/orders/create', {
+    return performRequest('/orders/create', {
       form,
       method: 'POST',
     })
+      .then(({ payload }) => payload)
   },
   cancelOrder(orderId) {
     return request(`/orders/${orderId}/cancel`, {

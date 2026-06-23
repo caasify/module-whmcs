@@ -43,6 +43,8 @@ export function DashboardAppProvider({ children, dashboardBootstrap: initialDash
     loadServerDetail: serverState.loadServerDetail,
     pricingContext: uiState.pricingContext,
     refreshDirectServerOverview: serverState.refreshDirectServerOverview,
+    walletBalanceReady: serverState.serverOverview.ready,
+    walletBalance: serverState.wallet.balance,
     setNotice: uiState.setNotice,
   })
 
@@ -56,6 +58,7 @@ export function DashboardAppProvider({ children, dashboardBootstrap: initialDash
     serverOverview: serverState.serverOverview,
     deployCategories: deployState.deployCategories,
     deployDraft: deployState.deployDraft,
+    deployErrorMessage: deployState.deployErrorMessage,
     deployLocations: deployState.deployLocations,
     deployPlans: deployState.deployPlans,
     selectedDeployBilling: deployState.selectedDeployBilling,
@@ -114,6 +117,7 @@ export function DashboardAppProvider({ children, dashboardBootstrap: initialDash
       refreshWhmcsTickets: ticketState.refreshWhmcsTickets,
       setLocale: uiState.setLocale,
       setThemeMode: uiState.setThemeMode,
+      dismissDeployError: deployState.dismissDeployError,
       startDeploy: deployState.startDeploy,
       toggleDesktopSidebar: uiState.toggleDesktopSidebar,
       toggleServerPower: serverState.toggleServerPower,

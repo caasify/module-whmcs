@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  AlertTriangle,
   Check,
   Cpu,
   FileText,
@@ -10,6 +11,7 @@ import {
 import { startTransition } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DeployStepLayout } from '../components/deploy/DeployStepLayout'
+import { ConfirmationDialog } from '../components/ui/ConfirmationDialog'
 import { SurfaceCard } from '../components/ui/SurfaceCard'
 import { useDashboardApp } from '../context/useDashboardApp'
 import { getDeployPlanMetricDisplay, getDeployPlanUnitLabel } from '../lib/deployPlanMetrics'
@@ -239,6 +241,7 @@ export function DeployConfigurePage() {
     selectedDeployLocation,
     selectedDeployPlan,
     selectedDeploySystem,
+    deployErrorMessage,
     deployPreview,
     formatCurrency,
     isRtl,
@@ -267,6 +270,12 @@ export function DeployConfigurePage() {
       ? t('deploy.network.ipv6Only')
       : t('common.noPublicIp')
   const moneyActionsBlocked = pricingContext.moneyActionsBlocked === true
+  const deployErrorDescription = deployErrorMessage
+    ? t(deployErrorMessage, undefined, deployErrorMessage)
+    : ''
+  const deployErrorTitle = deployErrorMessage === 'deploy.configure.balanceInsufficient'
+    ? t('deploy.configure.balanceInsufficientTitle', undefined, 'Insufficient balance')
+    : t('deploy.configure.deployFailed', undefined, 'Deployment failed')
   const checkoutLabel = t('deploy.configure.checkoutSummary', {
     duration: selectedDuration?.label
       ? t(selectedDuration.labelKey, undefined, selectedDuration.label)
@@ -314,6 +323,17 @@ export function DeployConfigurePage() {
       sectionDescriptionKey="deploy.steps.configure.description"
       sectionTitleKey="deploy.steps.configure.title"
     >
+      <ConfirmationDialog
+        cancelLabel={t('common.actions.close', undefined, 'Close')}
+        confirmLabel={t('common.actions.ok', undefined, 'OK')}
+        description={deployErrorDescription}
+        icon={AlertTriangle}
+        open={Boolean(deployErrorMessage)}
+        title={deployErrorTitle}
+        tone="danger"
+        onClose={actions.dismissDeployError}
+        onConfirm={actions.dismissDeployError}
+      />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid gap-6">
           {moneyActionsBlocked ? (
