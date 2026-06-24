@@ -479,6 +479,8 @@ function OfferCard({
           <a
             className="public-pricing-plan-button flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-[12px] border border-transparent bg-[color-mix(in_srgb,var(--color-primary)_22%,var(--color-surface)_78%)] px-4 type-button text-[var(--color-copy)] transition hover:bg-[color-mix(in_srgb,var(--color-primary)_28%,var(--color-surface)_72%)] whitespace-nowrap"
             href={loginUrl}
+            rel="noopener noreferrer"
+            target="_blank"
           >
             <span>{t('publicPricing.selectPlan', undefined, 'Select Plan')}</span>
             <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
