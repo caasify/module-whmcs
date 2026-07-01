@@ -191,6 +191,12 @@ function normalizeWhmcsAccess(whmcsAccess) {
   }
 }
 
+function normalizeFeatureFlags(featureFlags) {
+  return {
+    enableVpn: featureFlags?.enableVpn !== false,
+  }
+}
+
 function normalizePublicPricingCatalog(publicPricingCatalog) {
   if (!publicPricingCatalog || typeof publicPricingCatalog !== 'object') {
     return {
@@ -264,6 +270,7 @@ export function readDashboardBootstrap() {
     locale,
     supportedLocales,
     uiSettings: normalizeDashboardUiSettings(bootstrap.uiSettings),
+    featureFlags: normalizeFeatureFlags(bootstrap.featureFlags),
     cloudVpsConfig: normalizeCloudVpsConfig(bootstrap.cloudVpsConfig),
     companyProfile: normalizeCompanyProfile(bootstrap.companyProfile),
     currentClient: normalizeCurrentClient(bootstrap.currentClient),

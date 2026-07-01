@@ -237,8 +237,8 @@ function matchesCountryFilter(plan, selectedCountryCode) {
   return planCountries.some((countryCode) => countryCode === selectedCountryCode)
 }
 
-function buildCountryCatalog(productsPayload, pricingContext, cloudVpsConfig, selectedCountryCode) {
-  const plans = mapProductsToDeployPlans(productsPayload, pricingContext, cloudVpsConfig)
+function buildCountryCatalog(productsPayload, pricingContext, cloudVpsConfig, featureFlags, selectedCountryCode) {
+  const plans = mapProductsToDeployPlans(productsPayload, pricingContext, cloudVpsConfig, featureFlags)
     .filter((plan) => matchesCountryFilter(plan, selectedCountryCode))
 
   return {
@@ -250,6 +250,26 @@ function buildCountryCatalog(productsPayload, pricingContext, cloudVpsConfig, se
     },
     plans,
   }
+}
+
+function collectCountryCodesFromPlans(plans = []) {
+  const countryCodes = new Set()
+
+  for (const plan of plans) {
+    const variants = Array.isArray(plan?.cityVariants) && plan.cityVariants.length > 0
+      ? plan.cityVariants
+      : [{ location: plan?.location }]
+
+    for (const variant of variants) {
+      const countryCode = String(variant?.location?.countryCode ?? '').trim()
+
+      if (countryCode) {
+        countryCodes.add(countryCode)
+      }
+    }
+  }
+
+  return countryCodes
 }
 
 function getPublicCountryTranslationKey(location) {
@@ -507,6 +527,7 @@ function OfferCard({
 
 export function PublicPricingPage({
   cloudVpsConfig,
+  featureFlags,
   formatCurrency,
   loginUrl,
   localizeDigits,
@@ -514,10 +535,26 @@ export function PublicPricingPage({
   publicPricingCatalog,
   t,
 }) {
+  const bootstrapPlans = mapProductsToDeployPlans(
+    publicPricingCatalog?.productsPayload,
+    pricingContext,
+    cloudVpsConfig,
+    featureFlags,
+  )
+  const bootstrapProducts = Array.isArray(publicPricingCatalog?.productsPayload?.data)
+    ? publicPricingCatalog.productsPayload.data
+    : []
+  const visibleCountryCodes = collectCountryCodesFromPlans(bootstrapPlans)
   const visibleLocations = filterLocationsByCloudVpsConfig(
     mapCountriesToDeployLocations(publicPricingCatalog?.countriesPayload ?? publicPricingCatalog?.commonTermsPayload),
     cloudVpsConfig,
-  )
+  ).filter((location) => {
+    if (bootstrapProducts.length === 0) {
+      return true
+    }
+
+    return visibleCountryCodes.has(String(location?.countryCode ?? '').trim())
+  })
   const locationSections = buildPublicCountrySections(visibleLocations, t)
   const [selectedCountryCode, setSelectedCountryCode] = useState('')
   const [countryCatalogs, setCountryCatalogs] = useState({})
@@ -585,6 +622,7 @@ export function PublicPricingPage({
           response.productsPayload,
           pricingContext,
           cloudVpsConfig,
+          featureFlags,
           selectedCountry?.countryCode ?? '',
         )
 
@@ -616,6 +654,7 @@ export function PublicPricingPage({
     cloudVpsConfig,
     countryCatalogs,
     countryRequestNonce,
+    featureFlags,
     pricingContext,
     selectedCountry?.countryCode,
     selectedCountryCacheKey,

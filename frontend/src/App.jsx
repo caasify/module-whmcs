@@ -57,6 +57,7 @@ function PublicPricingApp({ dashboardBootstrap }) {
             <PublicPricingPage
               companyProfile={uiState.companyProfile}
               cloudVpsConfig={uiState.cloudVpsConfig}
+              featureFlags={dashboardBootstrap.featureFlags}
               formatCurrency={uiState.formatCurrency}
               loginUrl={dashboardBootstrap.loginUrl}
               localizeDigits={uiState.localizeDigits}

@@ -16,6 +16,7 @@ final class DashboardSettings
     public const DEFAULT_THEME_MODE = 'light';
     public const DEFAULT_APP_SCALE = 0.7;
     public const DEFAULT_COMMISSION_PERCENT = 0.0;
+    public const DEFAULT_ENABLE_VPN = true;
     public const DEFAULT_CLIENT_MENU_TITLE = 'Company';
     public const DEFAULT_PUBLIC_PRICING_MENU_TITLE = 'Pricing';
     public const CLIENT_MENU_PLACEMENT_MAIN_MENU = 'MainMenu';
@@ -287,6 +288,22 @@ final class DashboardSettings
         ];
     }
 
+    public static function getDefaultFeatureSettings(): array
+    {
+        return [
+            'enableVpn' => self::DEFAULT_ENABLE_VPN,
+        ];
+    }
+
+    public static function normalizeFeatureSettings(array $settings): array
+    {
+        return [
+            'enableVpn' => array_key_exists('enableVpn', $settings)
+                ? self::normalizeCheckboxValue($settings['enableVpn'])
+                : self::DEFAULT_ENABLE_VPN,
+        ];
+    }
+
     /**
      * @return array{
      *   hiddenCountryCodes: array<int, string>,
@@ -476,6 +493,9 @@ final class DashboardSettings
             ...$settings,
             'emailSettings' => $emailSettings,
             'adminApiToken' => $this->addonModuleSettingsRepository->getAdminApiToken(),
+            'featureSettings' => self::normalizeFeatureSettings(
+                is_array($settings['featureSettings'] ?? null) ? $settings['featureSettings'] : []
+            ),
             'cloudVpsSettings' => self::normalizeCloudVpsSettings(
                 is_array($settings['cloudVpsSettings'] ?? null) ? $settings['cloudVpsSettings'] : []
             ),
@@ -503,6 +523,11 @@ final class DashboardSettings
         return $this->getAdminSettings()['uiSettings'];
     }
 
+    public function getFeatureSettings(): array
+    {
+        return self::normalizeFeatureSettings($this->getAdminSettings()['featureSettings'] ?? []);
+    }
+
     public function getClientMenuSettings(): array
     {
         return self::normalizeClientMenuSettings($this->getPublicUiSettings()['clientMenu'] ?? []);
@@ -522,6 +547,7 @@ final class DashboardSettings
         $fontInput = is_array($uiInput['fonts'] ?? null) ? $uiInput['fonts'] : [];
         $colorInput = is_array($uiInput['colors'] ?? null) ? $uiInput['colors'] : [];
         $emailInput = is_array($input['emailSettings'] ?? null) ? $input['emailSettings'] : [];
+        $featureInput = is_array($input['featureSettings'] ?? null) ? $input['featureSettings'] : [];
         $cloudVpsInput = is_array($input['cloudVpsSettings'] ?? null) ? $input['cloudVpsSettings'] : [];
         $pricingInput = is_array($input['pricingSettings'] ?? null) ? $input['pricingSettings'] : [];
         $existingToken = self::sanitizeToken($existingSettings['adminApiToken'] ?? null);
@@ -529,6 +555,9 @@ final class DashboardSettings
         $availableCurrencies = $this->whmcsCurrencies->getCurrencies();
         $existingEmailSettings = self::normalizeEmailSettings(
             is_array($existingSettings['emailSettings'] ?? null) ? $existingSettings['emailSettings'] : []
+        );
+        $existingFeatureSettings = self::normalizeFeatureSettings(
+            is_array($existingSettings['featureSettings'] ?? null) ? $existingSettings['featureSettings'] : []
         );
         $existingCloudVpsSettings = self::normalizeCloudVpsSettings(
             is_array($existingSettings['cloudVpsSettings'] ?? null) ? $existingSettings['cloudVpsSettings'] : []
@@ -612,6 +641,11 @@ final class DashboardSettings
                 'fromName' => array_key_exists('fromName', $emailInput)
                     ? $emailInput['fromName']
                     : $existingEmailSettings['fromName'],
+            ]),
+            'featureSettings' => self::normalizeFeatureSettings([
+                'enableVpn' => array_key_exists('enableVpn', $featureInput)
+                    ? $featureInput['enableVpn']
+                    : $existingFeatureSettings['enableVpn'],
             ]),
             'cloudVpsSettings' => $this->prepareCloudVpsSettingsForSave(
                 $cloudVpsInput,

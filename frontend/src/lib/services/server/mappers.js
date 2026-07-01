@@ -225,6 +225,35 @@ function findOptionByBooleanValue(field, enabled) {
   }) ?? null
 }
 
+function normalizeFeatureFlags(featureFlags = null) {
+  return {
+    enableVpn: featureFlags?.enableVpn !== false,
+  }
+}
+
+function isVpnLikeTitle(value) {
+  const normalized = String(value ?? '').trim().toLowerCase()
+
+  return normalized.includes('vpn') || normalized.includes('#vpn')
+}
+
+function isTrojanTemplateName(value) {
+  return /^vpn\s+trojan(?:\s+.+)?$/i.test(String(value ?? '').trim())
+}
+
+function isVpnProduct(product, featureFlags = null) {
+  const { enableVpn } = normalizeFeatureFlags(featureFlags)
+
+  if (enableVpn) {
+    return false
+  }
+
+  const type = String(product?.type ?? '').trim().toLowerCase()
+  const title = String(product?.title ?? product?.name ?? '').trim()
+
+  return type === 'vpn' || isVpnLikeTitle(title)
+}
+
 function getPrimaryProduct(order) {
   return order?.records?.[0]?.product ?? null
 }
@@ -718,28 +747,31 @@ export function mapBillingOptions(product, pricingContext = null) {
   })
 }
 
-export function mapOperatingSystems(product) {
+export function mapOperatingSystems(product, featureFlags = null) {
+  const { enableVpn } = normalizeFeatureFlags(featureFlags)
   const templateField = findFieldByName(product, 'template')
   const options = templateField?.options ?? []
 
-  return options.map((option) => {
-    const familyMeta = formatOsFamily(option?.name)
+  return options
+    .filter((option) => enableVpn || !isTrojanTemplateName(option?.name))
+    .map((option) => {
+      const familyMeta = formatOsFamily(option?.name)
 
-    return {
-      id: `template-${option.id}`,
-      fieldId: templateField?.id ?? null,
-      fieldKey: String(templateField?.label ?? templateField?.name ?? 'Template').trim() || 'Template',
-      optionId: option.id,
-      optionValue: option.value,
-      title: String(option?.name ?? 'Template').replace(/\s+64(\s*bit)?$/i, '').trim(),
-      subtitle: /\b64\b/i.test(option?.name ?? '') ? '64-bit' : 'Template',
-      subtitleKey: /\b64\b/i.test(option?.name ?? '') ? 'common.bits64' : null,
-      family: familyMeta.family,
-      familyCode: familyMeta.familyCode,
-      icon: familyMeta.icon,
-      rawOption: option,
-    }
-  })
+      return {
+        id: `template-${option.id}`,
+        fieldId: templateField?.id ?? null,
+        fieldKey: String(templateField?.label ?? templateField?.name ?? 'Template').trim() || 'Template',
+        optionId: option.id,
+        optionValue: option.value,
+        title: String(option?.name ?? 'Template').replace(/\s+64(\s*bit)?$/i, '').trim(),
+        subtitle: /\b64\b/i.test(option?.name ?? '') ? '64-bit' : 'Template',
+        subtitleKey: /\b64\b/i.test(option?.name ?? '') ? 'common.bits64' : null,
+        family: familyMeta.family,
+        familyCode: familyMeta.familyCode,
+        icon: familyMeta.icon,
+        rawOption: option,
+      }
+    })
 }
 
 function resolveNetworkField(product, fieldName, pricingContext = null) {
@@ -981,7 +1013,7 @@ export function getNetworkCharge(selectedBilling, optionPrice, billingOptions = 
     : Number(price.toFixed(2))
 }
 
-export function buildDeployPlan(product, pricingContext = null) {
+export function buildDeployPlan(product, pricingContext = null, featureFlags = null) {
   const detail = resolveProductDetail(product)
   const locationCountry = detail?.dc_country ?? 'Unknown'
   const locationCity = formatCityLabel(detail?.dc_city ?? 'Unknown')
@@ -991,7 +1023,7 @@ export function buildDeployPlan(product, pricingContext = null) {
   const disk = `${toNumber(detail?.disk_size, 0)} GB`
   const trafficLimit = toNumber(product?.traffic_limit, 0)
   const billingOptions = mapBillingOptions(product, pricingContext)
-  const operatingSystems = mapOperatingSystems(product)
+  const operatingSystems = mapOperatingSystems(product, featureFlags)
   const ipv4Config = resolveNetworkField(product, 'ipv4', pricingContext)
   const ipv6Config = resolveNetworkField(product, 'ipv6', pricingContext)
   const defaultBilling = billingOptions[0] ?? null
@@ -1032,7 +1064,12 @@ export function buildDeployPlan(product, pricingContext = null) {
   }
 }
 
-export function mapProductsToDeployPlans(productsPayload, pricingContext = null, cloudVpsConfig = null) {
+export function mapProductsToDeployPlans(
+  productsPayload,
+  pricingContext = null,
+  cloudVpsConfig = null,
+  featureFlags = null,
+) {
   const groupedPlans = new Map()
 
   for (const product of productsPayload?.data ?? []) {
@@ -1040,7 +1077,16 @@ export function mapProductsToDeployPlans(productsPayload, pricingContext = null,
       continue
     }
 
-    const plan = buildDeployPlan(product, pricingContext)
+    if (isVpnProduct(product, featureFlags)) {
+      continue
+    }
+
+    const plan = buildDeployPlan(product, pricingContext, featureFlags)
+
+    if (plan.operatingSystems.length === 0) {
+      continue
+    }
+
     const planGroupKey = createDeployPlanGroupKey(plan)
     const existingPlan = groupedPlans.get(planGroupKey)
 

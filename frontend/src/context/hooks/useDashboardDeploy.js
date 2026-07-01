@@ -28,6 +28,7 @@ function parseCreatedServerId(payload) {
 export function useDashboardDeploy({
   cloudVpsConfig,
   directAuthReady,
+  featureFlags,
   loadServerDetail,
   pricingContext,
   refreshDirectServerOverview,
@@ -183,7 +184,12 @@ export function useDashboardDeploy({
 
     try {
       const productsPayload = await caasifyServerApi.getProductsByCountry(locationTermId)
-      const nextPlans = mapProductsToDeployPlans(productsPayload, pricingContext, cloudVpsConfig)
+      const nextPlans = mapProductsToDeployPlans(
+        productsPayload,
+        pricingContext,
+        cloudVpsConfig,
+        featureFlags,
+      )
 
       setDeployPlans(nextPlans)
       setDeployDraft((current) => {
@@ -227,7 +233,7 @@ export function useDashboardDeploy({
         plans: false,
       }))
     }
-  }, [cloudVpsConfig, directAuthReady, pricingContext])
+  }, [cloudVpsConfig, directAuthReady, featureFlags, pricingContext])
 
   const updateDeployDraft = useCallback((partial) => {
     setDeployDraft((current) => {

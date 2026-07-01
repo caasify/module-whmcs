@@ -85,6 +85,7 @@ final class PublicPricingBootstrapController
             'loginUrl' => '/index.php?rp=/login',
             'supportedLocales' => DashboardSettings::getSupportedLocales(),
             'uiSettings' => $adminSettings['uiSettings'],
+            'featureFlags' => $adminSettings['featureSettings'] ?? DashboardSettings::getDefaultFeatureSettings(),
             'cloudVpsConfig' => $cloudVpsConfig,
             'services' => CaasifyServiceEndpoints::getPublicConfig($adminSettings['hubBaseUrl']),
             'companyProfile' => WhmcsCompanyProfile::get(),

@@ -40,6 +40,7 @@ export function DashboardAppProvider({ children, dashboardBootstrap: initialDash
   const deployState = useDashboardDeploy({
     cloudVpsConfig: uiState.cloudVpsConfig,
     directAuthReady: directAuthState.ready,
+    featureFlags: uiState.featureFlags,
     loadServerDetail: serverState.loadServerDetail,
     pricingContext: uiState.pricingContext,
     refreshDirectServerOverview: serverState.refreshDirectServerOverview,
@@ -88,6 +89,7 @@ export function DashboardAppProvider({ children, dashboardBootstrap: initialDash
     supportedLanguages: uiState.resolvedLanguages,
     companyProfile: uiState.companyProfile,
     cloudVpsConfig: uiState.cloudVpsConfig,
+    featureFlags: uiState.featureFlags,
     currencyLabel: uiState.currencyLabel,
     formatWhmcsCompactCurrency: uiState.formatWhmcsCompactCurrency,
     formatWhmcsCurrency: uiState.formatWhmcsCurrency,

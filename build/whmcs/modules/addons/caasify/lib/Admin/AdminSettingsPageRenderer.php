@@ -59,6 +59,9 @@ final class AdminSettingsPageRenderer
         $brandName = self::BRAND_NAME;
         $launchCopy = $language['admin_launch_copy'] ?? 'Customize the ' . $brandName . ' WHMCS reselling module';
         $uiSettings = is_array($settings['uiSettings'] ?? null) ? $settings['uiSettings'] : [];
+        $featureSettings = DashboardSettings::normalizeFeatureSettings(
+            is_array($settings['featureSettings'] ?? null) ? $settings['featureSettings'] : []
+        );
         $cloudVpsSettings = DashboardSettings::normalizeCloudVpsSettings(
             is_array($settings['cloudVpsSettings'] ?? null) ? $settings['cloudVpsSettings'] : []
         );
@@ -165,6 +168,20 @@ final class AdminSettingsPageRenderer
         );
         echo '</div>';
         echo $this->renderPricingCurrenciesTable($language, $pricingSettings, $availableCurrencies);
+        echo '</section>';
+        echo '<section data-caasify-card>';
+        echo $this->renderSectionHeader(
+            $language['admin_settings_features_title'] ?? 'Product Features',
+            $language['admin_settings_features_copy'] ?? 'Control which product lines customers can browse and purchase.'
+        );
+        echo '<div data-caasify-grid="connection">';
+        echo $this->renderCheckboxField(
+            $language['admin_settings_enable_vpn_label'] ?? 'Enable VPN',
+            'caasify[featureSettings][enableVpn]',
+            (bool) ($featureSettings['enableVpn'] ?? DashboardSettings::DEFAULT_ENABLE_VPN),
+            $language['admin_settings_enable_vpn_help'] ?? 'When disabled, VPN purchase flows are hidden and Trojan templates are removed from VPS operating system choices.'
+        );
+        echo '</div>';
         echo '</section>';
         echo '</div>';
         echo '</section>';

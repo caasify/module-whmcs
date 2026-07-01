@@ -23,6 +23,7 @@ final class CaasifySettingsRepository
                 $table->string('hub_base_url', 255);
                 $table->string('default_dashboard_language', 8);
                 $table->longText('ui_settings_json')->nullable();
+                $table->longText('feature_settings_json')->nullable();
                 $table->longText('cloud_vps_settings_json')->nullable();
                 $table->longText('email_settings_json')->nullable();
                 $table->longText('pricing_settings_json')->nullable();
@@ -47,6 +48,9 @@ final class CaasifySettingsRepository
         $uiSettings = DashboardSettings::normalizeUiSettings(
             $this->decodeUiSettings($data['ui_settings_json'] ?? null)
         );
+        $featureSettings = DashboardSettings::normalizeFeatureSettings(
+            $this->decodeSettingsJson($data['feature_settings_json'] ?? null)
+        );
         $emailSettings = DashboardSettings::normalizeEmailSettings(
             $this->decodeSettingsJson($data['email_settings_json'] ?? null)
         );
@@ -62,6 +66,7 @@ final class CaasifySettingsRepository
             'hubBaseUrl' => DashboardSettings::normalizeHubBaseUrl($data['hub_base_url'] ?? null),
             'defaultDashboardLanguage' => DashboardSettings::resolveLocale($data['default_dashboard_language'] ?? null),
             'uiSettings' => $uiSettings,
+            'featureSettings' => $featureSettings,
             'cloudVpsSettings' => $cloudVpsSettings,
             'emailSettings' => $emailSettings,
             'pricingSettings' => $this->decodeSettingsJson($data['pricing_settings_json'] ?? null),
@@ -79,6 +84,10 @@ final class CaasifySettingsRepository
             ),
             'ui_settings_json' => json_encode(
                 DashboardSettings::normalizeUiSettings($settings['uiSettings'] ?? []),
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            ),
+            'feature_settings_json' => json_encode(
+                DashboardSettings::normalizeFeatureSettings($settings['featureSettings'] ?? []),
                 JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
             ),
             'cloud_vps_settings_json' => json_encode(
@@ -128,6 +137,10 @@ final class CaasifySettingsRepository
                 DashboardSettings::getDefaultUiSettings(),
                 JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
             ),
+            'feature_settings_json' => json_encode(
+                DashboardSettings::getDefaultFeatureSettings(),
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            ),
             'cloud_vps_settings_json' => json_encode(
                 DashboardSettings::getDefaultCloudVpsSettings(),
                 JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
@@ -149,6 +162,9 @@ final class CaasifySettingsRepository
     {
         $schema = Capsule::schema();
         $columns = [
+            'feature_settings_json' => static function (Blueprint $table): void {
+                $table->longText('feature_settings_json')->nullable();
+            },
             'cloud_vps_settings_json' => static function (Blueprint $table): void {
                 $table->longText('cloud_vps_settings_json')->nullable();
             },

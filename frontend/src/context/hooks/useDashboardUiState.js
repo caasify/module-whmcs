@@ -133,6 +133,7 @@ export function useDashboardUiState({ dashboardBootstrap = readDashboardBootstra
     closeMobileNav,
     companyProfile: dashboardBootstrap.companyProfile,
     cloudVpsConfig: dashboardBootstrap.cloudVpsConfig,
+    featureFlags: dashboardBootstrap.featureFlags,
     currencyLabel: getCurrencyLabel(displayCurrency),
     dir,
     dismissNotice,
