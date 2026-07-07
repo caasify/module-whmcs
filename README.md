@@ -126,3 +126,11 @@ If the installation is correct, the Caasify module should load.
 - Use only the files from the `build/` folder
 - Do not upload source folders like `frontend/` or `backend/`
 - Do not run any build steps if you are only installing the module
+
+## Start Contact Caasify
+
+We as Caasify think that to grasp the difficulties of any job, it's important to have professional experience in that field. Now that we have this understanding, we can provide help to our old ex-colleagues in webhosting industry.
+
+WEB: [https://caasify.com/](https://caasify.com/)
+
+Email: info@caasify.com
