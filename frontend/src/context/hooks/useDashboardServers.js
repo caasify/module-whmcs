@@ -104,12 +104,17 @@ function normalizeServerActionCode(actionCode) {
   return [actionCode]
 }
 
+function findSilentSettledFailure(results) {
+  return results.find(
+    (result) => result.status === 'rejected' && isSilentDirectApiFailure(result.reason),
+  ) ?? null
+}
+
 export function useDashboardServers({
   currentClient,
   directAuthReady,
   pricingContext,
   setNotice,
-  showErrorNotice,
 }) {
   const [user, setUser] = useState(() => createInitialDashboardUser(currentClient))
   const [wallet, setWallet] = useState(initialDashboardWallet)
@@ -171,43 +176,73 @@ export function useDashboardServers({
     })
 
     try {
-      const [
-        profilePayload,
-        ordersPayload,
-        activeOrdersPayload,
-        totalSpendPayload,
-        expenseDatesPayload,
-      ] = await Promise.all([
+      const results = await Promise.allSettled([
         caasifyServerApi.getProfile(),
         caasifyServerApi.getOrders(),
         caasifyServerApi.getActiveOrderReport(),
         caasifyServerApi.getTotalExpenseReport(),
         caasifyServerApi.getExpenseDates(),
       ])
-      const liveServers = mapOrdersToServers(ordersPayload?.data ?? [], pricingContext)
-      const profile = profilePayload?.data ?? {}
-      const activeOrders = Number(activeOrdersPayload?.total ?? liveServers.length)
+      const silentFailure = findSilentSettledFailure(results)
+
+      if (silentFailure) {
+        clearDirectServerState()
+        return
+      }
+
+      const [
+        profileResult,
+        ordersResult,
+        activeOrdersResult,
+        totalSpendResult,
+        expenseDatesResult,
+      ] = results
+
+      if (profileResult.status !== 'fulfilled') {
+        throw profileResult.reason
+      }
+
+      const profile = profileResult.value?.data ?? {}
+      const liveServers = ordersResult.status === 'fulfilled'
+        ? mapOrdersToServers(ordersResult.value?.data ?? [], pricingContext)
+        : null
       const balance = convertHubAmount(
         Number(profile.available_balance ?? profile.balance ?? 0),
         pricingContext,
         2,
       )
-      const totalSpend = convertHubAmount(Number(totalSpendPayload?.total ?? 0), pricingContext, 2)
 
-      setServers(liveServers)
       setUser((current) => mapProfileToUser(profile, current))
       setWallet((current) => ({
         ...current,
         balance,
       }))
-      setServerOverview({
-        accountBalance: balance,
-        activeOrders,
-        directTokenPresent: true,
-        expenseDates: expenseDatesPayload?.data ?? [],
-        rawActiveOrdersTotal: activeOrders,
-        ready: true,
-        totalSpend,
+
+      if (liveServers !== null) {
+        setServers(liveServers)
+      }
+
+      setServerOverview((current) => {
+        const activeOrders = activeOrdersResult.status === 'fulfilled'
+          ? Number(activeOrdersResult.value?.total ?? liveServers?.length ?? current.rawActiveOrdersTotal)
+          : (liveServers?.length ?? current.rawActiveOrdersTotal)
+        const totalSpend = totalSpendResult.status === 'fulfilled'
+          ? convertHubAmount(Number(totalSpendResult.value?.total ?? 0), pricingContext, 2)
+          : current.totalSpend
+        const expenseDates = expenseDatesResult.status === 'fulfilled'
+          ? (expenseDatesResult.value?.data ?? [])
+          : current.expenseDates
+
+        return {
+          ...current,
+          accountBalance: balance,
+          activeOrders,
+          directTokenPresent: true,
+          expenseDates,
+          rawActiveOrdersTotal: activeOrders,
+          ready: true,
+          totalSpend,
+        }
       })
       setLoading({
         overview: false,
@@ -236,7 +271,7 @@ export function useDashboardServers({
         overview: false,
       })
     }
-  }, [clearDirectServerState, directAuthReady, pricingContext, showErrorNotice])
+  }, [clearDirectServerState, directAuthReady, pricingContext])
 
   const setServerPowerAction = useCallback((serverId, powerAction) => {
     setServerActionStates((current) => {
