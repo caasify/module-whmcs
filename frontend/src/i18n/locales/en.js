@@ -341,6 +341,7 @@ export const enMessages = {
   "invoice.lineItemFallback": "Invoice line item",
   "invoice.lineItemAddFunds": "Add funds",
   "invoice.subtotal": "Sub Total",
+  "invoice.vat": "VAT",
   "invoice.creditApplied": "Credit Applied",
   "invoice.total": "Total",
   "invoice.loading": "Loading invoice details...",

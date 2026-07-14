@@ -88,6 +88,7 @@ export function DashboardAppProvider({ children, dashboardBootstrap: initialDash
     isRtl: uiState.isRtl,
     supportedLanguages: uiState.resolvedLanguages,
     companyProfile: uiState.companyProfile,
+    billingContext: uiState.billingContext,
     cloudVpsConfig: uiState.cloudVpsConfig,
     featureFlags: uiState.featureFlags,
     currencyLabel: uiState.currencyLabel,

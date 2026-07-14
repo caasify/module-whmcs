@@ -108,6 +108,8 @@ export function InvoiceDetailPage() {
   const invoiceRequiresNativeFallback = Boolean(invoiceId) && Boolean(invoiceReadState.detailNativeFallback[invoiceId])
   const isLoading = Boolean(invoiceId) && Boolean(loading.invoiceDetails[invoiceId])
   const subtotal = invoice?.subtotal ?? invoice?.total ?? 0
+  const vat = Number.isFinite(Number(invoice?.vat)) ? Number(invoice.vat) : 0
+  const hasVat = Math.abs(vat) > 0.00001 || String(invoice?.vatDisplay ?? '').trim() !== ''
   const paymentMethodLabel = resolvePaymentMethodLabel(paymentMethods, invoice)
   const fallbackInvoiceUrl = buildWhmcsClientAreaUrl('viewinvoice.php', { id: invoiceId })
   const nativeInvoiceUrl = new URL(nativeRoutes.invoiceDetailUrl, window.location.href)
@@ -302,6 +304,14 @@ export function InvoiceDetailPage() {
                   <span className="text-[var(--color-copy)]">{t('invoice.subtotal')}</span>
                   <span className="type-body-strong text-[var(--color-ink)]">{formatInvoiceAmount(subtotal, invoice.subtotalDisplay)}</span>
                 </div>
+                {hasVat ? (
+                  <div className="type-body flex items-center justify-between">
+                    <span className="text-[var(--color-copy)]">{t('invoice.vat')}</span>
+                    <span className="type-body-strong text-[var(--color-ink)]">
+                      {formatInvoiceAmount(vat, invoice.vatDisplay)}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="type-body flex items-center justify-between">
                   <span className="text-[var(--color-copy)]">{t('invoice.creditApplied')}</span>
                   <span className="type-body-strong text-[var(--color-ink)]">

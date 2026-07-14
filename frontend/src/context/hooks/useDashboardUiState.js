@@ -130,6 +130,7 @@ export function useDashboardUiState({ dashboardBootstrap = readDashboardBootstra
   }, [])
 
   return {
+    billingContext: dashboardBootstrap.billingContext,
     closeMobileNav,
     companyProfile: dashboardBootstrap.companyProfile,
     cloudVpsConfig: dashboardBootstrap.cloudVpsConfig,

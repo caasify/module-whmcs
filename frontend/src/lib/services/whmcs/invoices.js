@@ -76,7 +76,11 @@ function isInvoiceSummaryRow(row, cells, cellNodes = []) {
     return true
   }
 
-  return ['sub total', 'subtotal', 'credit', 'total'].includes(firstCell)
+  return (
+    ['sub total', 'subtotal', 'credit', 'total'].includes(firstCell) ||
+    /^vat\b/.test(firstCell) ||
+    /^tax(?:\b|\s*\d)/.test(firstCell)
+  )
 }
 
 function resolveInvoiceLineItemTypeCode(description) {
@@ -213,13 +217,18 @@ function normalizeInvoiceLabel(value) {
   return normalizeWhmcsText(value).toLowerCase().replace(/[:-]\s*$/, '')
 }
 
-function extractLabeledValueFromLines(document, labels) {
+function extractLabeledValueFromLines(document, labels, excludedLabels = []) {
   const normalizedLabels = labels.map((label) => normalizeInvoiceLabel(label))
+  const normalizedExcludedLabels = excludedLabels.map((label) => normalizeInvoiceLabel(label))
   const lines = getNodeLines(document.body)
 
   for (let index = 0; index < lines.length; index += 1) {
     const currentLine = lines[index]
     const normalizedLine = normalizeInvoiceLabel(currentLine)
+
+    if (normalizedExcludedLabels.some((label) => normalizedLine.includes(label))) {
+      continue
+    }
 
     for (const label of normalizedLabels) {
       if (!normalizedLine.startsWith(label)) {
@@ -261,14 +270,15 @@ function findInvoiceRows(document, baseUrl) {
     .filter(Boolean)
 }
 
-function findValueByLabels(document, labels) {
-  const textLineMatch = extractLabeledValueFromLines(document, labels)
+function findValueByLabels(document, labels, excludedLabels = []) {
+  const textLineMatch = extractLabeledValueFromLines(document, labels, excludedLabels)
 
   if (textLineMatch) {
     return textLineMatch
   }
 
   const normalizedLabels = labels.map((label) => normalizeWhmcsText(label).toLowerCase())
+  const normalizedExcludedLabels = excludedLabels.map((label) => normalizeWhmcsText(label).toLowerCase())
 
   for (const row of Array.from(document.querySelectorAll('table tr'))) {
     const cells = Array.from(row.querySelectorAll('th, td'))
@@ -281,6 +291,10 @@ function findValueByLabels(document, labels) {
 
     const firstCell = cells[0].toLowerCase()
 
+    if (normalizedExcludedLabels.some((label) => firstCell.includes(label))) {
+      continue
+    }
+
     if (normalizedLabels.some((label) => firstCell.includes(label))) {
       return cells[cells.length - 1]
     }
@@ -288,6 +302,10 @@ function findValueByLabels(document, labels) {
 
   for (const term of Array.from(document.querySelectorAll('dt'))) {
     const termText = getNodeText(term).toLowerCase()
+
+    if (normalizedExcludedLabels.some((label) => termText.includes(label))) {
+      continue
+    }
 
     if (!normalizedLabels.some((label) => termText.includes(label))) {
       continue
@@ -478,6 +496,8 @@ export async function fetchInvoiceDetail(invoiceDetailUrl, fallbackProfile = {})
   const invoiceDateText = findValueByLabels(document, ['invoice date', 'proforma invoice date', 'date created'])
   const dueDateText = findValueByLabels(document, ['due date'])
   const subtotalDisplay = findValueByLabels(document, ['subtotal', 'sub total'])
+  const vatPrimaryDisplay = findValueByLabels(document, ['vat', 'tax 1', 'tax1', 'tax'], ['tax rate', 'taxrate'])
+  const vatSecondaryDisplay = findValueByLabels(document, ['tax 2', 'tax2'], ['tax rate', 'taxrate'])
   const totalDisplay = findValueByLabels(document, ['total'])
   const amountDueDisplay = findValueByLabels(
     document,
@@ -485,6 +505,7 @@ export async function fetchInvoiceDetail(invoiceDetailUrl, fallbackProfile = {})
   )
   const creditAppliedDisplay = findValueByLabels(document, ['credit'])
   const subtotal = parseMoneyValue(subtotalDisplay, Number.NaN)
+  const vat = parseMoneyValue(vatPrimaryDisplay, 0) + parseMoneyValue(vatSecondaryDisplay, 0)
   const total = parseMoneyValue(totalDisplay, Number.NaN)
   const amountDue = parseMoneyValue(
     amountDueDisplay,
@@ -549,6 +570,8 @@ export async function fetchInvoiceDetail(invoiceDetailUrl, fallbackProfile = {})
     statusTone,
     subtotal: resolvedSubtotal,
     subtotalDisplay,
+    vat,
+    vatDisplay: [vatPrimaryDisplay, vatSecondaryDisplay].filter(Boolean).join(' + '),
     total: resolvedTotal,
     totalDisplay,
     type: 'WHMCS Invoice',

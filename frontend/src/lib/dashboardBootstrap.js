@@ -197,6 +197,22 @@ function normalizeFeatureFlags(featureFlags) {
   }
 }
 
+function normalizeAddFundsTax(addFundsTax) {
+  return {
+    enabled: addFundsTax?.enabled === true,
+    inclusive: addFundsTax?.inclusive === true,
+    compound: addFundsTax?.compound === true,
+    level1Rate: Number.isFinite(Number(addFundsTax?.level1Rate)) ? Number(addFundsTax.level1Rate) : 0,
+    level2Rate: Number.isFinite(Number(addFundsTax?.level2Rate)) ? Number(addFundsTax.level2Rate) : 0,
+  }
+}
+
+function normalizeBillingContext(billingContext) {
+  return {
+    addFundsTax: normalizeAddFundsTax(billingContext?.addFundsTax),
+  }
+}
+
 function normalizePublicPricingCatalog(publicPricingCatalog) {
   if (!publicPricingCatalog || typeof publicPricingCatalog !== 'object') {
     return {
@@ -276,6 +292,7 @@ export function readDashboardBootstrap() {
     currentClient: normalizeCurrentClient(bootstrap.currentClient),
     nativeRoutes: normalizeNativeRoutes(bootstrap.nativeRoutes),
     pricingContext: normalizePricingContext(bootstrap.pricingContext),
+    billingContext: normalizeBillingContext(bootstrap.billingContext),
     publicPricingCatalog: normalizePublicPricingCatalog(bootstrap.publicPricingCatalog),
     isPublicPricingView: viewMode === 'publicPricing',
     viewMode,

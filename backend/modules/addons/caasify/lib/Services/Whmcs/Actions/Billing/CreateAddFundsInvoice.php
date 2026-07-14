@@ -64,7 +64,7 @@ final class CreateAddFundsInvoice
             'notes' => AddFundsInvoiceRepository::INVOICE_MARKER,
             'itemdescription1' => $lineItemDescription,
             'itemamount1' => number_format($amount, 2, '.', ''),
-            'itemtaxed1' => false,
+            'itemtaxed1' => true,
             'autoapplycredit' => false,
         ]);
 

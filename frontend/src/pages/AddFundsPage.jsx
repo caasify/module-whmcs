@@ -41,9 +41,74 @@ function resolveSuggestedPresetAmount(eurAmount, pricingContext) {
   return roundSuggestedAmountDown(convertHubAmount(eurAmount, pricingContext, 2))
 }
 
+function roundCurrencyAmount(value) {
+  return Math.round((Number(value) + Number.EPSILON) * 100) / 100
+}
+
+function resolveAddFundsSummary(amount, addFundsTax) {
+  const normalizedAmount = Number(amount)
+
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    return {
+      subtotal: 0,
+      total: 0,
+      vat: 0,
+    }
+  }
+
+  const rateOne = Math.max(0, Number(addFundsTax?.level1Rate ?? 0)) / 100
+  const rateTwo = Math.max(0, Number(addFundsTax?.level2Rate ?? 0)) / 100
+
+  if (addFundsTax?.enabled !== true || (rateOne <= 0 && rateTwo <= 0)) {
+    return {
+      subtotal: roundCurrencyAmount(normalizedAmount),
+      total: roundCurrencyAmount(normalizedAmount),
+      vat: 0,
+    }
+  }
+
+  if (addFundsTax?.inclusive === true) {
+    let subtotal = normalizedAmount
+    let vatLevelOne = 0
+    let vatLevelTwo = 0
+
+    if (addFundsTax?.compound === true) {
+      subtotal = normalizedAmount / ((1 + rateOne) * (1 + rateTwo))
+      vatLevelOne = subtotal * rateOne
+      vatLevelTwo = (subtotal + vatLevelOne) * rateTwo
+    } else {
+      subtotal = normalizedAmount / (1 + rateOne + rateTwo)
+      vatLevelOne = subtotal * rateOne
+      vatLevelTwo = subtotal * rateTwo
+    }
+
+    const vat = roundCurrencyAmount(vatLevelOne) + roundCurrencyAmount(vatLevelTwo)
+    const total = roundCurrencyAmount(normalizedAmount)
+
+    return {
+      subtotal: roundCurrencyAmount(total - vat),
+      total,
+      vat: roundCurrencyAmount(vat),
+    }
+  }
+
+  const subtotal = roundCurrencyAmount(normalizedAmount)
+  const vatLevelOne = roundCurrencyAmount(subtotal * rateOne)
+  const vatLevelTwoBase = addFundsTax?.compound === true ? subtotal + vatLevelOne : subtotal
+  const vatLevelTwo = roundCurrencyAmount(vatLevelTwoBase * rateTwo)
+  const vat = roundCurrencyAmount(vatLevelOne + vatLevelTwo)
+
+  return {
+    subtotal,
+    total: roundCurrencyAmount(subtotal + vat),
+    vat,
+  }
+}
+
 export function AddFundsPage() {
   const {
     wallet,
+    billingContext,
     paymentMethods,
     loading,
     actions,
@@ -64,6 +129,7 @@ export function AddFundsPage() {
   const activeMethod = paymentMethods.find((item) => item.id === selectedMethodId) ?? null
   const resolvedPresetAmount = resolveSuggestedPresetAmount(selectedPresetEurAmount, pricingContext)
   const resolvedAmount = customAmount ? Number(customAmount) || 0 : resolvedPresetAmount
+  const addFundsSummary = resolveAddFundsSummary(resolvedAmount, billingContext?.addFundsTax)
   const canSubmit =
     resolvedAmount > 0 &&
     activeMethod &&
@@ -183,9 +249,21 @@ export function AddFundsPage() {
               </span>
             </div>
             <div className="type-body-lg flex items-center justify-between text-[var(--color-copy)]">
+              <span>{t('invoice.subtotal')}</span>
+              <span className="type-body-strong text-[var(--color-ink)]">
+                {formatWhmcsCurrency(addFundsSummary.subtotal)}
+              </span>
+            </div>
+            <div className="type-body-lg flex items-center justify-between text-[var(--color-copy)]">
+              <span>{t('invoice.vat')}</span>
+              <span className="type-body-strong text-[var(--color-ink)]">
+                {formatWhmcsCurrency(addFundsSummary.vat)}
+              </span>
+            </div>
+            <div className="type-body-lg flex items-center justify-between text-[var(--color-copy)]">
               <span>{t('addFunds.youPay')}</span>
               <span className="type-metric-md text-[var(--color-ink)]">
-                {formatWhmcsCurrency(resolvedAmount)}
+                {formatWhmcsCurrency(addFundsSummary.total)}
               </span>
             </div>
             <div className="type-body-lg flex items-center justify-between text-[var(--color-copy)]">

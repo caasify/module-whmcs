@@ -18,6 +18,7 @@ final class InvoiceDetailMapper
         $statusCode = $this->statusCode($status);
         $total = $this->normalizeFloat($invoice['total'] ?? 0);
         $subtotal = $this->normalizeFloat($invoice['subtotal'] ?? $total);
+        $vat = $this->normalizeFloat($invoice['tax'] ?? 0) + $this->normalizeFloat($invoice['tax2'] ?? 0);
         $creditApplied = $this->normalizeFloat($invoice['credit'] ?? 0);
         $amountDue = $this->normalizeFloat($invoice['balance'] ?? ($statusCode === 'paid' ? 0 : $total));
         $lineItems = $this->mapLineItems($invoice['items']['item'] ?? []);
@@ -52,6 +53,8 @@ final class InvoiceDetailMapper
             'statusTone' => $this->statusTone($statusCode),
             'subtotal' => $subtotal,
             'subtotalDisplay' => $this->stringValue($invoice['subtotalformatted'] ?? ''),
+            'vat' => $vat,
+            'vatDisplay' => $this->stringValue($invoice['taxformatted'] ?? ''),
             'total' => $total,
             'totalDisplay' => $this->stringValue($invoice['totalformatted'] ?? ''),
             'type' => 'WHMCS Invoice',

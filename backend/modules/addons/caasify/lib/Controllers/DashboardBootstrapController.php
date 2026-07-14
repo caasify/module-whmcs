@@ -13,6 +13,7 @@ use Caasify\Core\Config\DashboardSettings;
 use Caasify\Core\Config\WhmcsClientAreaUrl;
 use Caasify\Core\Config\WhmcsCompanyProfile;
 use Caasify\Core\Pricing\ClientPricingService;
+use Caasify\Services\Whmcs\Actions\Billing\ResolveAddFundsTaxConfig;
 
 final class DashboardBootstrapController
 {
@@ -20,7 +21,8 @@ final class DashboardBootstrapController
         private readonly DashboardSettings $settings = new DashboardSettings(),
         private readonly CurrentClient $currentClient = new CurrentClient(),
         private readonly WhmcsClientAreaAccess $whmcsClientAreaAccess = new WhmcsClientAreaAccess(),
-        private readonly ClientPricingService $pricing = new ClientPricingService()
+        private readonly ClientPricingService $pricing = new ClientPricingService(),
+        private readonly ResolveAddFundsTaxConfig $resolveAddFundsTaxConfig = new ResolveAddFundsTaxConfig()
     ) {
     }
 
@@ -54,6 +56,9 @@ final class DashboardBootstrapController
             'currentClient' => $this->currentClient->getProfile(),
             'nativeRoutes' => WhmcsClientAreaUrl::getPublicRoutes(),
             'pricingContext' => $this->pricing->buildClientPricingContext($clientId),
+            'billingContext' => [
+                'addFundsTax' => $this->resolveAddFundsTaxConfig->execute($clientId),
+            ],
             'whmcsAccess' => [
                 'canUseCustomTicketsAndInvoices' => $this->whmcsClientAreaAccess->canUseCustomTicketsAndInvoices(),
             ],

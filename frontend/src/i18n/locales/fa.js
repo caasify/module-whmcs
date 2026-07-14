@@ -334,6 +334,7 @@ export const faMessages = {
   "invoice.lineItemFallback": "آیتم فاکتور",
   "invoice.lineItemAddFunds": "افزودن وجه",
   "invoice.subtotal": "جمع جزء",
+  "invoice.vat": "مالیات بر ارزش افزوده",
   "invoice.creditApplied": "اعتبار اعمال‌شده",
   "invoice.total": "جمع کل",
   "invoice.loading": "در حال بارگذاری جزئیات فاکتور...",
