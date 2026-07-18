@@ -327,6 +327,8 @@ export const enMessages = {
   "addFunds.method": "Method",
   "addFunds.youPay": "You Pay",
   "addFunds.currentBalance": "Current Balance",
+  "addFunds.minimumAmount": "Minimum top-up: {amount}",
+  "addFunds.minimumAmountHint": "Enter at least {amount}.",
   "addFunds.terms": "By adding funds, you agree to our Terms of Service. Funds are non-refundable.",
   "addFunds.customAmount": "Custom amount",
   "addFunds.creatingInvoice": "Creating invoice...",

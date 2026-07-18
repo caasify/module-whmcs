@@ -16,6 +16,7 @@ final class DashboardSettings
     public const DEFAULT_THEME_MODE = 'light';
     public const DEFAULT_APP_SCALE = 0.7;
     public const DEFAULT_COMMISSION_PERCENT = 0.0;
+    public const DEFAULT_MINIMUM_ADD_FUNDS_EUR_AMOUNT = 0.0;
     public const DEFAULT_ENABLE_VPN = true;
     public const DEFAULT_CLIENT_MENU_TITLE = 'Company';
     public const DEFAULT_PUBLIC_PRICING_MENU_TITLE = 'Pricing';
@@ -389,6 +390,7 @@ final class DashboardSettings
     {
         return [
             'commissionPercent' => self::DEFAULT_COMMISSION_PERCENT,
+            'minimumAddFundsEurAmount' => self::DEFAULT_MINIMUM_ADD_FUNDS_EUR_AMOUNT,
             'currencies' => [],
         ];
     }
@@ -435,6 +437,29 @@ final class DashboardSettings
         return round($numericValue, 6);
     }
 
+    public static function sanitizeMinimumAddFundsEurAmount(mixed $value): float
+    {
+        if (is_string($value)) {
+            $value = trim($value);
+        }
+
+        if (!is_numeric($value)) {
+            return self::DEFAULT_MINIMUM_ADD_FUNDS_EUR_AMOUNT;
+        }
+
+        $numericValue = (float) $value;
+
+        if ($numericValue < 0) {
+            return self::DEFAULT_MINIMUM_ADD_FUNDS_EUR_AMOUNT;
+        }
+
+        if ($numericValue > 1000000) {
+            $numericValue = 1000000;
+        }
+
+        return round($numericValue, 2);
+    }
+
     /**
      * @param array<int, array<string, mixed>> $availableCurrencies
      * @return array<string, mixed>
@@ -476,6 +501,9 @@ final class DashboardSettings
 
         return [
             'commissionPercent' => self::sanitizeCommissionPercent($settings['commissionPercent'] ?? null),
+            'minimumAddFundsEurAmount' => self::sanitizeMinimumAddFundsEurAmount(
+                $settings['minimumAddFundsEurAmount'] ?? null
+            ),
             'currencies' => $normalizedCurrencies,
         ];
     }
@@ -671,9 +699,16 @@ final class DashboardSettings
         array $availableCurrencies
     ): array {
         $commissionRaw = $pricingInput['commissionPercent'] ?? $existingPricingSettings['commissionPercent'] ?? 0;
+        $minimumAddFundsRaw = $pricingInput['minimumAddFundsEurAmount']
+            ?? $existingPricingSettings['minimumAddFundsEurAmount']
+            ?? self::DEFAULT_MINIMUM_ADD_FUNDS_EUR_AMOUNT;
 
         if ($commissionRaw === '' || !is_numeric($commissionRaw) || (float) $commissionRaw < 0) {
             throw new ValidationException('Commission percent must be 0 or greater.');
+        }
+
+        if ($minimumAddFundsRaw === '' || !is_numeric($minimumAddFundsRaw) || (float) $minimumAddFundsRaw < 0) {
+            throw new ValidationException('Minimum add funds amount must be 0 or greater.');
         }
 
         $inputCurrencies = is_array($pricingInput['currencies'] ?? null) ? $pricingInput['currencies'] : [];
@@ -722,6 +757,7 @@ final class DashboardSettings
 
         return [
             'commissionPercent' => self::sanitizeCommissionPercent($commissionRaw),
+            'minimumAddFundsEurAmount' => self::sanitizeMinimumAddFundsEurAmount($minimumAddFundsRaw),
             'currencies' => $currencies,
         ];
     }

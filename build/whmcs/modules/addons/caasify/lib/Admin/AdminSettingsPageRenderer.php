@@ -166,6 +166,13 @@ final class AdminSettingsPageRenderer
             '10.00',
             $language['admin_settings_pricing_commission_help'] ?? ''
         );
+        echo $this->renderTextField(
+            $language['admin_settings_pricing_minimum_add_funds_label'] ?? 'Minimum Add Funds (EUR)',
+            'caasify[pricingSettings][minimumAddFundsEurAmount]',
+            $this->formatNumberInputValue($pricingSettings['minimumAddFundsEurAmount'] ?? 0.0, 2),
+            '0.00',
+            $language['admin_settings_pricing_minimum_add_funds_help'] ?? ''
+        );
         echo '</div>';
         echo $this->renderPricingCurrenciesTable($language, $pricingSettings, $availableCurrencies);
         echo '</section>';

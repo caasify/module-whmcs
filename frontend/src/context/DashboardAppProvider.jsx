@@ -24,7 +24,6 @@ export function DashboardAppProvider({ children, dashboardBootstrap: initialDash
     showErrorNotice: uiState.showErrorNotice,
   })
   const billingState = useDashboardBilling({
-    nativeRoutes: uiState.nativeRoutes,
     pricingContext: uiState.pricingContext,
     serverOverview: serverState.serverOverview,
     setNotice: uiState.setNotice,

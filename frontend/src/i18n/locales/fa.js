@@ -320,6 +320,8 @@ export const faMessages = {
   "addFunds.method": "روش",
   "addFunds.youPay": "مبلغ پرداختی",
   "addFunds.currentBalance": "موجودی فعلی",
+  "addFunds.minimumAmount": "حداقل شارژ: {amount}",
+  "addFunds.minimumAmountHint": "حداقل {amount} وارد کنید.",
   "addFunds.terms": "با افزودن وجه، با شرایط استفاده موافقت می‌کنید. این مبالغ قابل بازگشت نیستند.",
   "addFunds.customAmount": "مبلغ دلخواه",
   "addFunds.creatingInvoice": "در حال ایجاد فاکتور...",

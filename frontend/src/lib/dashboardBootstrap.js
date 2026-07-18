@@ -210,6 +210,7 @@ function normalizeAddFundsTax(addFundsTax) {
 function normalizeBillingContext(billingContext) {
   return {
     addFundsTax: normalizeAddFundsTax(billingContext?.addFundsTax),
+    minimumAddFundsEurAmount: Math.max(0, Number(billingContext?.minimumAddFundsEurAmount ?? 0)) || 0,
   }
 }
 

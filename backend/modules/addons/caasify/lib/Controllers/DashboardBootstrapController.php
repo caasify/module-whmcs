@@ -58,6 +58,9 @@ final class DashboardBootstrapController
             'pricingContext' => $this->pricing->buildClientPricingContext($clientId),
             'billingContext' => [
                 'addFundsTax' => $this->resolveAddFundsTaxConfig->execute($clientId),
+                'minimumAddFundsEurAmount' => DashboardSettings::sanitizeMinimumAddFundsEurAmount(
+                    $adminSettings['pricingSettings']['minimumAddFundsEurAmount'] ?? null
+                ),
             ],
             'whmcsAccess' => [
                 'canUseCustomTicketsAndInvoices' => $this->whmcsClientAreaAccess->canUseCustomTicketsAndInvoices(),

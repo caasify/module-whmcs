@@ -53,6 +53,8 @@ export const esMessages = {
   'header.pages.servers': 'Lista de servidores',
   'header.pages.deploy': 'Implementar servicio',
   'header.pages.addFunds': 'Agregar fondos',
+  'addFunds.minimumAmount': 'Recarga minima: {amount}',
+  'addFunds.minimumAmountHint': 'Ingresa al menos {amount}.',
   'header.pages.invoice': 'Detalles de factura',
   'header.pages.billing': 'Facturación',
   'header.pages.tickets': 'Lista de tickets',

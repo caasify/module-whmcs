@@ -143,7 +143,6 @@ function mapExpenseOrdersToUsageRows(rows, pricingContext) {
 }
 
 export function useDashboardBilling({
-  nativeRoutes,
   pricingContext,
   serverOverview,
   showErrorNotice,

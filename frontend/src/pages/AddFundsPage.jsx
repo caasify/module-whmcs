@@ -68,19 +68,13 @@ function resolveAddFundsSummary(amount, addFundsTax) {
   }
 
   if (addFundsTax?.inclusive === true) {
-    let subtotal = normalizedAmount
-    let vatLevelOne = 0
-    let vatLevelTwo = 0
-
-    if (addFundsTax?.compound === true) {
-      subtotal = normalizedAmount / ((1 + rateOne) * (1 + rateTwo))
-      vatLevelOne = subtotal * rateOne
-      vatLevelTwo = (subtotal + vatLevelOne) * rateTwo
-    } else {
-      subtotal = normalizedAmount / (1 + rateOne + rateTwo)
-      vatLevelOne = subtotal * rateOne
-      vatLevelTwo = subtotal * rateTwo
-    }
+    const subtotal = addFundsTax?.compound === true
+      ? normalizedAmount / ((1 + rateOne) * (1 + rateTwo))
+      : normalizedAmount / (1 + rateOne + rateTwo)
+    const vatLevelOne = subtotal * rateOne
+    const vatLevelTwo = addFundsTax?.compound === true
+      ? (subtotal + vatLevelOne) * rateTwo
+      : subtotal * rateTwo
 
     const vat = roundCurrencyAmount(vatLevelOne) + roundCurrencyAmount(vatLevelTwo)
     const total = roundCurrencyAmount(normalizedAmount)
@@ -122,16 +116,28 @@ export function AddFundsPage() {
   const [customAmount, setCustomAmount] = useState('')
   const [selectedPresetEurAmount, setSelectedPresetEurAmount] = useState(addFundsPresetAmounts[0] ?? 10)
   const moneyActionsBlocked = pricingContext.moneyActionsBlocked === true
+  const minimumAddFundsEurAmount = Math.max(0, Number(billingContext?.minimumAddFundsEurAmount ?? 0))
+  const minimumAllowedAmount = minimumAddFundsEurAmount > 0
+    ? convertHubAmount(minimumAddFundsEurAmount, pricingContext, 2)
+    : 0
+  const availablePresetEurAmounts = addFundsPresetAmounts.filter((amount) => amount >= minimumAddFundsEurAmount)
+  const activePresetEurAmount = availablePresetEurAmounts.includes(selectedPresetEurAmount)
+    ? selectedPresetEurAmount
+    : (availablePresetEurAmounts[0] ?? null)
   const selectedMethodId =
     paymentMethods.some((item) => item.id === method)
       ? method
       : (paymentMethods[0]?.id ?? '')
   const activeMethod = paymentMethods.find((item) => item.id === selectedMethodId) ?? null
-  const resolvedPresetAmount = resolveSuggestedPresetAmount(selectedPresetEurAmount, pricingContext)
-  const resolvedAmount = customAmount ? Number(customAmount) || 0 : resolvedPresetAmount
+  const resolvedPresetAmount = activePresetEurAmount !== null
+    ? resolveSuggestedPresetAmount(activePresetEurAmount, pricingContext)
+    : 0
+  const resolvedAmount = customAmount !== '' ? Number(customAmount) || 0 : resolvedPresetAmount
   const addFundsSummary = resolveAddFundsSummary(resolvedAmount, billingContext?.addFundsTax)
+  const meetsMinimumAmount = minimumAllowedAmount <= 0 || resolvedAmount >= minimumAllowedAmount
   const canSubmit =
     resolvedAmount > 0 &&
+    meetsMinimumAmount &&
     activeMethod &&
     !moneyActionsBlocked &&
     !loading.creatingAddFundsInvoice &&
@@ -291,14 +297,19 @@ export function AddFundsPage() {
         <SurfaceCard className="page-grid">
           <div>
             <p className="type-label text-[var(--color-ink)]">{t('addFunds.selectAmount')}</p>
+            {minimumAllowedAmount > 0 ? (
+              <p className="type-body-sm text-[var(--color-copy)]">
+                {t('addFunds.minimumAmount', { amount: formatWhmcsCurrency(minimumAllowedAmount) }, `Minimum top-up: ${formatWhmcsCurrency(minimumAllowedAmount)}`)}
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-3">
-            {addFundsPresetAmounts.map((amount) => (
+            {availablePresetEurAmounts.map((amount) => (
               <button
                 key={amount}
                 className={cn(
                   'type-button min-w-[164px] rounded-2xl border px-6 py-4 transition',
-                  !customAmount && selectedPresetEurAmount === amount
+                  customAmount === '' && activePresetEurAmount === amount
                     ? 'theme-button-primary'
                     : 'border-[var(--color-border-strong)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:border-[var(--color-primary)]',
                 )}
@@ -316,13 +327,20 @@ export function AddFundsPage() {
               <input
                 className="type-input h-[58px] w-full rounded-2xl border border-[var(--color-border-strong)] bg-[var(--color-surface)] px-6 text-start text-[var(--color-ink)] outline-none transition placeholder:text-[var(--color-copy)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/15"
                 disabled={moneyActionsBlocked}
+                min={minimumAllowedAmount > 0 ? minimumAllowedAmount : undefined}
                 onChange={(event) => setCustomAmount(event.target.value)}
                 placeholder={t('addFunds.customAmount')}
+                step="0.01"
                 type="number"
                 value={customAmount}
               />
             </label>
           </div>
+          {minimumAllowedAmount > 0 && customAmount !== '' && !meetsMinimumAmount ? (
+            <p className="type-body-sm text-[var(--color-warning)]">
+              {t('addFunds.minimumAmountHint', { amount: formatWhmcsCurrency(minimumAllowedAmount) }, `Enter at least ${formatWhmcsCurrency(minimumAllowedAmount)}.`)}
+            </p>
+          ) : null}
         </SurfaceCard>
       </div>
     </div>

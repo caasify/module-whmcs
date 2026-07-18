@@ -53,6 +53,8 @@ export const ruMessages = {
   'header.pages.servers': 'Список серверов',
   'header.pages.deploy': 'Развернуть сервис',
   'header.pages.addFunds': 'Пополнить баланс',
+  'addFunds.minimumAmount': 'Минимальное пополнение: {amount}',
+  'addFunds.minimumAmountHint': 'Введите не меньше {amount}.',
   'header.pages.invoice': 'Детали счета',
   'header.pages.billing': 'Биллинг',
   'header.pages.tickets': 'Список тикетов',

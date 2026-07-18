@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Caasify\Services\Whmcs\Actions\Billing;
 
+use Caasify\Core\Config\DashboardSettings;
 use Caasify\Core\Config\WhmcsCompanyProfile;
 use Caasify\Core\Pricing\ClientPricingService;
+use Caasify\Core\Support\CurrencyFormat;
 use Caasify\Core\Support\ValidationException;
 use Caasify\Repositories\AddFundsInvoiceRepository;
 use Caasify\Services\Whmcs\Client\LocalApiClient;
@@ -16,7 +18,8 @@ final class CreateAddFundsInvoice
         private readonly LocalApiClient $localApiClient = new LocalApiClient(),
         private readonly GetActivatedPaymentMethods $getActivatedPaymentMethods = new GetActivatedPaymentMethods(),
         private readonly AddFundsInvoiceRepository $addFundsInvoices = new AddFundsInvoiceRepository(),
-        private readonly ClientPricingService $pricing = new ClientPricingService()
+        private readonly ClientPricingService $pricing = new ClientPricingService(),
+        private readonly DashboardSettings $settings = new DashboardSettings()
     ) {
     }
 
@@ -46,6 +49,8 @@ final class CreateAddFundsInvoice
                 'Top-ups are temporarily unavailable because pricing for your currency is not configured yet.'
             );
         }
+
+        $this->assertMinimumAddFundsAmount($amount, $pricingContext);
 
         $creditedEurAmount = $this->pricing->convertClientAmountToHubEuro($amount, $pricingContext, 2);
 
@@ -89,5 +94,32 @@ final class CreateAddFundsInvoice
         );
 
         return $invoiceId;
+    }
+
+    /**
+     * @param array<string, mixed> $pricingContext
+     */
+    private function assertMinimumAddFundsAmount(float $amount, array $pricingContext): void
+    {
+        $adminSettings = $this->settings->getAdminSettings();
+        $minimumAddFundsEurAmount = DashboardSettings::sanitizeMinimumAddFundsEurAmount(
+            $adminSettings['pricingSettings']['minimumAddFundsEurAmount'] ?? null
+        );
+
+        if ($minimumAddFundsEurAmount <= 0) {
+            return;
+        }
+
+        $minimumAllowedAmount = $this->pricing->convertHubEuroToDisplay($minimumAddFundsEurAmount, $pricingContext, 2);
+
+        if ($amount + 0.00001 >= $minimumAllowedAmount) {
+            return;
+        }
+
+        $currency = is_array($pricingContext['clientCurrency'] ?? null) ? $pricingContext['clientCurrency'] : null;
+
+        throw new ValidationException(
+            'The minimum add funds amount is ' . CurrencyFormat::formatCurrency($minimumAllowedAmount, $currency) . '.'
+        );
     }
 }
