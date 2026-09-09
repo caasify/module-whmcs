@@ -225,21 +225,34 @@ function formatPlanTraffic(value, t) {
   return rawValue || 'n/a'
 }
 
-function matchesCountryFilter(plan, selectedCountryCode) {
-  if (!selectedCountryCode) {
+function matchesCountryFilter(plan, selectedCountryCode, selectedCountryIsoCode) {
+  const normalizedCountryCode = String(selectedCountryCode ?? '').trim()
+  const normalizedCountryIsoCode = String(selectedCountryIsoCode ?? '').trim().toUpperCase()
+
+  if (!normalizedCountryCode && !normalizedCountryIsoCode) {
     return true
   }
 
-  const planCountries = (plan?.cityVariants?.length ? plan.cityVariants : [{ location: plan.location }])
-    .map((variant) => String(variant?.location?.countryCode ?? '').trim())
+  const planLocations = (plan?.cityVariants?.length ? plan.cityVariants : [{ location: plan.location }])
+    .map((variant) => variant?.location)
     .filter(Boolean)
 
-  return planCountries.some((countryCode) => countryCode === selectedCountryCode)
+  return planLocations.some((location) => (
+    String(location.countryCode ?? '').trim() === normalizedCountryCode
+    || String(location.code ?? '').trim().toUpperCase() === normalizedCountryIsoCode
+  ))
 }
 
-function buildCountryCatalog(productsPayload, pricingContext, cloudVpsConfig, featureFlags, selectedCountryCode) {
+function buildCountryCatalog(
+  productsPayload,
+  pricingContext,
+  cloudVpsConfig,
+  featureFlags,
+  selectedCountryCode,
+  selectedCountryIsoCode,
+) {
   const plans = mapProductsToDeployPlans(productsPayload, pricingContext, cloudVpsConfig, featureFlags)
-    .filter((plan) => matchesCountryFilter(plan, selectedCountryCode))
+    .filter((plan) => matchesCountryFilter(plan, selectedCountryCode, selectedCountryIsoCode))
 
   return {
     metricScales: {
@@ -623,7 +636,8 @@ export function PublicPricingPage({
           pricingContext,
           cloudVpsConfig,
           featureFlags,
-          selectedCountry?.countryCode ?? '',
+          selectedCountry?.countryCode,
+          selectedCountry?.code,
         )
 
         setCountryCatalogs((current) => ({
@@ -657,6 +671,7 @@ export function PublicPricingPage({
     featureFlags,
     pricingContext,
     selectedCountry?.countryCode,
+    selectedCountry?.code,
     selectedCountryCacheKey,
     selectedCountryTermId,
     t,
