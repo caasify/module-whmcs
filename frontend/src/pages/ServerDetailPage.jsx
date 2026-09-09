@@ -32,6 +32,7 @@ import { useCopyToClipboard } from '../hooks/useCopyToClipboard'
 import { translateDatacenterName } from '../lib/locationDisplay'
 import { formatOperatingSystemDisplayName } from '../lib/operatingSystems'
 import { getServerProvisioningStatus } from '../lib/services/server'
+import { requestConsoleAccess } from '../lib/services/server/console'
 import { cn } from '../lib/cn'
 import { formatRelativeTime } from '../lib/formatters'
 
@@ -297,6 +298,9 @@ export function ServerDetailPage() {
   const [detailStatus, setDetailStatus] = useState(() => (serverId ? 'loading' : 'idle'))
   const [pendingConfirmation, setPendingConfirmation] = useState(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [isOpeningConsole, setIsOpeningConsole] = useState(false)
+  const [consoleUrl, setConsoleUrl] = useState('')
+  const [consoleError, setConsoleError] = useState('')
   const { copiedKey, copyValue } = useCopyToClipboard()
   const handleLoadServerDetail = useEffectEvent(async (nextServerId) => {
     const nextServer = await actions.loadServerDetail(nextServerId)
@@ -326,6 +330,24 @@ export function ServerDetailPage() {
   const pendingPowerAction = serverId ? serverActionStates[serverId]?.powerAction ?? null : null
   const effectivePoweredOn = pendingPowerAction ? pendingPowerAction === 'start' : poweredOn
   const provisioningStatus = getServerProvisioningStatus(server)
+
+  async function handleLaunchConsole() {
+    if (!server?.orderId || isOpeningConsole) {
+      return
+    }
+
+    setConsoleError('')
+    setConsoleUrl('')
+    setIsOpeningConsole(true)
+
+    try {
+      setConsoleUrl(await requestConsoleAccess(server.orderId))
+    } catch (error) {
+      setConsoleError(error instanceof Error ? error.message : 'The server console is not available right now.')
+    } finally {
+      setIsOpeningConsole(false)
+    }
+  }
 
   useEffect(() => {
     if (!serverId) {
@@ -803,13 +825,34 @@ export function ServerDetailPage() {
                 <p className="type-body-lg mt-5 max-w-[270px] text-[var(--color-copy)]">
                   {t('serverDetail.webConsoleCopy')}
                 </p>
-                <Button
-                  className="mt-10 w-full justify-center rounded-[20px] py-5"
-                  disabled={!model.canLaunchConsole}
-                >
-                  <ArrowUpRight className="h-5 w-5" strokeWidth={2.1} />
-                  {t('common.actions.launchConsole')}
-                </Button>
+                {consoleUrl ? (
+                  <>
+                    <p className="type-body-sm mt-8 text-[var(--color-success)]">
+                      {t('serverDetail.consoleReady', undefined, 'The console is available now.')}
+                    </p>
+                    <Button
+                      className="mt-4 w-full justify-center rounded-[20px] py-5"
+                      href={consoleUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <ArrowUpRight className="h-5 w-5" strokeWidth={2.1} />
+                      {t('common.actions.openConsole', undefined, 'Open Console')}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    className="mt-10 w-full justify-center rounded-[20px] py-5"
+                    disabled={!model.canLaunchConsole || isOpeningConsole}
+                    onClick={handleLaunchConsole}
+                  >
+                    <ArrowUpRight className="h-5 w-5" strokeWidth={2.1} />
+                    {isOpeningConsole ? 'Loading console…' : t('common.actions.launchConsole')}
+                  </Button>
+                )}
+                {consoleError ? (
+                  <p className="type-body-sm mt-4 text-[var(--color-danger)]">{consoleError}</p>
+                ) : null}
               </div>
             </SurfaceCard>
           </div>
